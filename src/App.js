@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout, Form, Input, Button, Row, Col, DatePicker, InputNumber, Select } from 'antd';
 import moment from "moment";
-import logo from './logo.svg';
 import './App.css';
 
-const { Header, Footer, Content } = Layout;
+const { Header, Content } = Layout;
 const { Option } = Select;
 
 const layout = {
@@ -23,29 +22,76 @@ const tailLayout = {
 };
 
 function App() {
-  const onFinish = async (values) => {
-    console.log('Success:', values);
+  const dateFormat = 'MM/DD/YYYY';
+  const [form] = Form.useForm();
 
-    values.open_date = moment(values.open_date).format("D-M-YY");
-    values.expiration = moment(values.expiration).format("D-M-YY");
-  
-    const body = {
-      query: {
-        mutation: {
-          createOptionLedgerEntry(values) {
-            ticker
-            status
-          }
-        }
+  useEffect(() => {
+    const fetchLedger = async () => {
+      const rsp = await fetch('http://localhost:4000/graphql', {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: `
+          query {
+            getOptionLedger {
+              id
+              open_date
+              ticker
+              open_date
+              status
+              contracts
+              strike
+              expiration
+              credit
+              debit
+              close_date
+            }
+          }`
+        }),
+      });
+      console.log(rsp);
+    }
+
+    const rsp = fetchLedger();
+    console.log(rsp);
+  });
+
+  const onFinish = async (values) => {
+
+    values.open_date = moment(values.open_date).format(dateFormat);
+    values.expiration = moment(values.expiration).format(dateFormat);
+    values.close_date = moment(values.close_date).format(dateFormat);
+    values.strike = String(values.strike);
+    values.credit = String(values.credit);
+    values.debit = String(values.debit);
+
+    let params = '';
+    for (const key in values) {
+      if (values[key] === undefined) continue;
+      
+      params += `${key}: `;      
+      if (typeof values[key] === "string") {
+        params += `"${values[key]}"\n`;
+      } else {
+        params += `${values[key]}\n`;
       }
-    };
+    }
 
     const rsp = await fetch('http://localhost:4000/graphql', {
       method: "POST",
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify({ query: `
+        mutation {
+          createOptionLedgerEntry(${params}) {
+            ticker
+            status
+          }
+        }`
+      }),
     });
-    console.log(rsp.json());
+
+    if (rsp.status === 200) {
+      form.resetFields();
+    } 
   };
 
   const onFinishFailed = (errorInfo) => {
@@ -53,33 +99,29 @@ function App() {
   };
 
   const onDateChange = (date, dateString) => {
-    console.log(date, dateString);
+    // console.log(date, dateString);
   }
 
   return (
     <Layout>
       <Header>Header</Header>
       <Content>
-        <Row>
+        <Row style={{ margin: "20px" }}>
           <Col span={16}>Table</Col>
           <Col span={8}>
             <Form
               {...layout}
               name="basic"
+              form={form}
               onFinish={onFinish}
               onFinishFailed={onFinishFailed}
             >
-              <Form.Item
-                label="Type"
-                name="option_type"
-                rules={[{ required: true, message: 'Please select the option type!' }]}
+              <Form.Item 
+                label="Ticker" 
+                name="ticker"
+                rules={[{ required: true, message: 'Please enter the stock ticker!' }]}
               >
-                <Select
-                  placeholder="Select Option Type"                  
-                >
-                  <Option value="Cash Secured Put">Cash Secured Put</Option>
-                  <Option value="Covered Call">Covered Call</Option>                
-                </Select>
+                <Input placeholder="Stock Ticker" />
               </Form.Item>
               <Form.Item
                 label="Status"
@@ -93,20 +135,27 @@ function App() {
                   <Option value="CLOSED">CLOSED</Option>                
                 </Select>
               </Form.Item>
-
-              <Form.Item 
-                label="Ticker" 
-                name="ticker"
-                rules={[{ required: true, message: 'Please enter the stock ticker!' }]}
+              <Form.Item
+                label="Type"
+                name="option_type"
+                rules={[{ required: true, message: 'Please select the option type!' }]}
               >
-                <Input placeholder="Stock Ticker" />
+                <Select
+                  placeholder="Select Option Type"                  
+                >
+                  <Option value="Cash Secured Put">Cash Secured Put</Option>
+                  <Option value="Covered Call">Covered Call</Option>                
+                </Select>
               </Form.Item>
+              
+
+              
               <Form.Item 
                 label="Open Date"
                 name="open_date"
-                rules={[{ required: true, message: 'Please enter the open date!' }]}
+                rules={[{ required: true, message: 'Please enter the open date!' }]}                
               >
-                <DatePicker onChange={onDateChange} />
+                <DatePicker onChange={onDateChange} format={dateFormat} />
               </Form.Item>
 
               <Form.Item 
@@ -127,37 +176,37 @@ function App() {
                 <InputNumber
                   formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                   parser={value => value.replace(/\$\s?|(,*)/g, '')}
-                  // onChange={onChange}
                 />
               </Form.Item>
-
               <Form.Item 
-                label="Expiration"
-                name="expiration"
-                rules={[{ required: true, message: 'Please enter the expiration!' }]}
-              >
-                <DatePicker />
-              </Form.Item>
-
-              <Form.Item 
-                label="Close Date"
-                name="closed_date"
-              >
-                <DatePicker />
-              </Form.Item>
-
-              <Form.Item 
-                label="Credit"
+                label="Premium"
                 name="credit"
+                rules={[{ required: true, message: 'Please enter the premium collected!' }]}
               >
                 <InputNumber
                   formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                   parser={value => value.replace(/\$\s?|(,*)/g, '')}
                 />
               </Form.Item>
+              <Form.Item 
+                label="Expiration"
+                name="expiration"
+                rules={[{ required: true, message: 'Please enter the expiration!' }]}
+              >
+                <DatePicker format={dateFormat} onChange={onDateChange} />
+              </Form.Item>
 
               <Form.Item 
-                label="Debit"
+                label="Close Date"
+                name="close_date"
+              >
+                <DatePicker format={dateFormat} onChange={onDateChange} />
+              </Form.Item>
+
+              
+
+              <Form.Item 
+                label="Buy Out"
                 name="debit"
               >
                 <InputNumber
@@ -165,7 +214,7 @@ function App() {
                   parser={value => value.replace(/\$\s?|(,*)/g, '')}
                 />
               </Form.Item>
-
+              <hr />
               <Form.Item {...tailLayout}>
                 <Button type="primary" htmlType="submit">
                   Submit
@@ -175,7 +224,6 @@ function App() {
           </Col>
         </Row>
         </Content>
-      <Footer>This is a work in progress!</Footer>
     </Layout>
       
   );

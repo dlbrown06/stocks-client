@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Form, Input, Button, Row, Col, DatePicker, InputNumber, Select } from 'antd';
+import { Layout, Form, Input, Button, Row, Col, DatePicker, InputNumber, Select, Table } from 'antd';
 import moment from "moment";
+import axios from "axios";
 import './App.css';
 
 const { Header, Content } = Layout;
@@ -24,13 +25,16 @@ const tailLayout = {
 function App() {
   const dateFormat = 'MM/DD/YYYY';
   const [form] = Form.useForm();
+  const [ledgerData, setLedgerData] = useState([]);
+  const [ledgerColumns, setLedgerColumns] = useState([]);
 
   useEffect(() => {
     const fetchLedger = async () => {
-      const rsp = await fetch('http://localhost:4000/graphql', {
+      const rsp = await axios({
         method: "POST",
+        url: "http://localhost:4000/graphql",
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: `
+        data: JSON.stringify({ query: `
           query {
             getOptionLedger {
               id
@@ -46,14 +50,49 @@ function App() {
               close_date
             }
           }`
-        }),
+        })
       });
-      console.log(rsp);
+
+      const optionLedger = rsp.data.data.getOptionLedger;
+      
+      let key = 0;
+      const options = optionLedger.map(option => Object.assign(option, { key: ++key }));      
+
+      let columns = [];
+      Object.keys(options[0]).forEach(column => {
+        if (['key', 'id'].includes(column)) return;
+        
+        columns.push({
+          title: column,
+          dataIndex: column,
+          key: column,
+        });
+      });
+      
+      console.log("columns", columns);
+      setLedgerColumns(columns);
+
+      console.log("pre-processing options", options);
+      const transformedOptions = options.map(option => {
+        return {
+          id: option.id,
+          ticker: option.ticker,
+          status: option.status,
+          contracts: option.contracts,
+          strike: option.strike,
+          open_date: moment(option.open_date).format("M/DD"),          
+          credit: option.credit,
+          debit: option.debit,
+          expiration: moment(option.expiration, "M/D"),
+          close_date: moment(option.close_date, "M/D")
+        };        
+      });
+      console.log("post-processing options", transformedOptions);
+      setLedgerData(transformedOptions);
     }
 
-    const rsp = fetchLedger();
-    console.log(rsp);
-  });
+    fetchLedger();    
+  }, []);
 
   const onFinish = async (values) => {
 
@@ -62,7 +101,7 @@ function App() {
     values.close_date = moment(values.close_date).format(dateFormat);
     values.strike = String(values.strike);
     values.credit = String(values.credit);
-    values.debit = String(values.debit);
+    values.debit = values.debit !== undefined ? String(values.debit) : undefined;
 
     let params = '';
     for (const key in values) {
@@ -107,7 +146,14 @@ function App() {
       <Header>Header</Header>
       <Content>
         <Row style={{ margin: "20px" }}>
-          <Col span={16}>Table</Col>
+          <Col span={16}>
+            <Table 
+              columns={ledgerColumns} 
+              dataSource={ledgerData} 
+              size="small" 
+              pagination={{ pageSize: 100 }}
+            />
+          </Col>
           <Col span={8}>
             <Form
               {...layout}

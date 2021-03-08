@@ -18,7 +18,9 @@ import { ArrowUpOutlined, ArrowDownOutlined } from "@ant-design/icons";
 import moment from "moment";
 import axios from "axios";
 import "./App.css";
+import CONSTANTS from "./config/constants";
 
+const { Column, ColumnGroup } = Table;
 const { Header, Content } = Layout;
 const { Option } = Select;
 
@@ -50,6 +52,12 @@ function App() {
               credit
               debit
               close_date
+              annualized_return
+              net_credit
+              daily_return
+              option_type
+              buyout_target
+              target_premium
             }
           }`,
         }),
@@ -87,8 +95,14 @@ function App() {
           open_date: moment(option.open_date).format("MM/DD"),
           credit: option.credit,
           debit: option.debit,
+          net_credit: option.net_credit,
           expiration: moment(option.expiration).format("MM/DD"),
           close_date: moment(option.close_date).format("MM/DD"),
+          annualized_return: option.annualized_return,
+          daily_return: option.daily_return,
+          option_type: option.option_type,
+          buyout_target: option.buyout_target,
+          target_premium: option.target_premium,
         };
       });
 
@@ -156,7 +170,9 @@ function App() {
       collateral: strike * contracts * 100,
       days_open: moment(expiration).diff(open_date, "days"),
       target_premium:
-        strike * ((0.6 * moment(expiration).diff(open_date, "days")) / 365),
+        strike *
+        ((0.6 * moment(expiration).diff(open_date, "days")) / 365) *
+        1.3,
       buyout_target: credit * 0.25,
       daily_return:
         (((credit - debit) * contracts) /
@@ -183,11 +199,49 @@ function App() {
         <Row style={{ margin: "20px" }}>
           <Col span={16}>
             <Table
-              columns={ledgerColumns}
+              // columns={ledgerColumns}
               dataSource={ledgerData}
               size="small"
               pagination={{ pageSize: 100 }}
-            />
+            >
+              <Column title="Ticker" dataIndex="ticker" key="ticker" />
+              <Column title="Type" dataIndex="option_type" key="option_type" />
+              <Column title="Status" dataIndex="status" key="status" />
+              <Column title="Opened" dataIndex="open_date" key="open_date" />
+              <Column title="Strike" dataIndex="strike" key="strike" />
+              <Column title="Contracts" dataIndex="contracts" key="contracts" />
+              <Column title="Net" dataIndex="net_credit" key="net_credit" />
+              <Column
+                title="Expiration"
+                dataIndex="expiration"
+                key="expiration"
+              />
+              <ColumnGroup title="Analysis">
+                <Column
+                  title="Annualized"
+                  dataIndex="annualized_return"
+                  key="annualized_return"
+                  render={(data) => (
+                    <span
+                      style={
+                        data > CONSTANTS.TARGETS.PREMIUM_ANNUALIZED
+                          ? { color: "green" }
+                          : { color: "black" }
+                      }
+                    >
+                      {data}%
+                    </span>
+                  )}
+                />
+                <Column
+                  title="Daily"
+                  dataIndex="daily_return"
+                  key="daily_return"
+                />
+                <Column title="Premium" dataIndex="credit" key="credit" />
+                <Column title="Buyout" dataIndex="debit" key="debit" />
+              </ColumnGroup>
+            </Table>
           </Col>
           <Col span={8}>
             <Form

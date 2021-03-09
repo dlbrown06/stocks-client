@@ -27,90 +27,91 @@ const { Option } = Select;
 function App() {
   const dateFormat = "MM/DD/YYYY";
   const [form] = Form.useForm();
+  const [selectedLedgerId, setSelectedLedgerId] = useState(null);
   const [ledgerData, setLedgerData] = useState([]);
   const [ledgerColumns, setLedgerColumns] = useState([]);
   const [analysisData, setAnalysisData] = useState({});
 
   useEffect(() => {
-    const fetchLedger = async () => {
-      const rsp = await axios({
-        method: "POST",
-        url: "http://localhost:4000/graphql",
-        headers: { "Content-Type": "application/json" },
-        data: JSON.stringify({
-          query: `
-          query {
-            getOptionLedger {
-              id
-              open_date
-              ticker
-              open_date
-              status
-              contracts
-              strike
-              expiration
-              credit
-              debit
-              close_date
-              annualized_return
-              net_credit
-              daily_return
-              option_type
-              buyout_target
-              target_premium
-            }
-          }`,
-        }),
-      });
-
-      const optionLedger = rsp.data.data.getOptionLedger;
-
-      let key = 0;
-      const options = optionLedger.map((option) =>
-        Object.assign(option, { key: ++key })
-      );
-
-      let columns = [];
-      Object.keys(options[0]).forEach((column) => {
-        if (["key", "id"].includes(column)) return;
-
-        columns.push({
-          title: column,
-          dataIndex: column,
-          key: column,
-        });
-      });
-
-      setLedgerColumns(columns);
-
-      let optionKey = 0;
-      const transformedOptions = options.map((option) => {
-        return {
-          key: ++optionKey,
-          id: option.id,
-          ticker: option.ticker,
-          status: option.status,
-          contracts: option.contracts,
-          strike: option.strike,
-          open_date: moment(option.open_date).format("MM/DD"),
-          credit: option.credit,
-          debit: option.debit,
-          net_credit: option.net_credit,
-          expiration: moment(option.expiration).format("MM/DD"),
-          close_date: moment(option.close_date).format("MM/DD"),
-          annualized_return: option.annualized_return,
-          daily_return: option.daily_return,
-          option_type: option.option_type,
-          buyout_target: option.buyout_target,
-          target_premium: option.target_premium,
-        };
-      });
-
-      setLedgerData(transformedOptions);
-    };
-
     fetchLedger();
   }, []);
+
+  const fetchLedger = async () => {
+    const rsp = await axios({
+      method: "POST",
+      url: "http://localhost:4000/graphql",
+      headers: { "Content-Type": "application/json" },
+      data: JSON.stringify({
+        query: `
+        query {
+          getOptionLedger {
+            id
+            open_date
+            ticker
+            open_date
+            status
+            contracts
+            strike
+            expiration
+            credit
+            debit
+            close_date
+            annualized_return
+            net_credit
+            daily_return
+            option_type
+            buyout_target
+            target_premium
+          }
+        }`,
+      }),
+    });
+
+    const optionLedger = rsp.data.data.getOptionLedger;
+
+    let key = 0;
+    const options = optionLedger.map((option) =>
+      Object.assign(option, { key: ++key })
+    );
+
+    let columns = [];
+    Object.keys(options[0]).forEach((column) => {
+      if (["key", "id"].includes(column)) return;
+
+      columns.push({
+        title: column,
+        dataIndex: column,
+        key: column,
+      });
+    });
+
+    setLedgerColumns(columns);
+
+    let optionKey = 0;
+    const transformedOptions = options.map((option) => {
+      return {
+        key: ++optionKey,
+        id: option.id,
+        ticker: option.ticker,
+        status: option.status,
+        contracts: option.contracts,
+        strike: option.strike,
+        open_date: moment(option.open_date).format("MM/DD"),
+        credit: option.credit,
+        debit: option.debit,
+        net_credit: option.net_credit,
+        expiration: moment(option.expiration).format("MM/DD"),
+        close_date: moment(option.close_date).format("MM/DD"),
+        annualized_return: option.annualized_return,
+        daily_return: option.daily_return,
+        option_type: option.option_type,
+        buyout_target: option.buyout_target,
+        target_premium: option.target_premium,
+      };
+    });
+
+    setLedgerData(transformedOptions);
+  };
 
   const onFinish = async (values) => {
     values.open_date = moment(values.open_date).format(dateFormat);
@@ -149,6 +150,45 @@ function App() {
 
     if (rsp.status === 200) {
       form.resetFields();
+    }
+  };
+
+  const onUpdate = async () => {
+    const values = form.getFieldsValue();
+    values.open_date = moment(values.open_date).format(dateFormat);
+    values.expiration = moment(values.expiration).format(dateFormat);
+    values.close_date = moment(values.close_date).format(dateFormat);
+
+    let params = "";
+    for (const key in values) {
+      if (values[key] === undefined) continue;
+
+      params += `${key}: `;
+      if (typeof values[key] === "string") {
+        params += `"${values[key]}"\n`;
+      } else {
+        params += `${values[key]}\n`;
+      }
+    }
+
+    const rsp = await fetch("http://localhost:4000/graphql", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query: `
+        mutation {
+          updateOptionLedgerEntry(${params}) {
+            ticker
+            status
+          }
+        }`,
+      }),
+    });
+
+    if (rsp.status === 200) {
+      form.resetFields();
+      setSelectedLedgerId(null);
+      fetchLedger();
     }
   };
 
@@ -199,10 +239,32 @@ function App() {
         <Row style={{ margin: "20px" }}>
           <Col span={16}>
             <Table
-              // columns={ledgerColumns}
               dataSource={ledgerData}
               size="small"
               pagination={{ pageSize: 100 }}
+              onRow={(row, index) => {
+                return {
+                  onClick: (event) => {
+                    console.log("event", event);
+                    console.log("row", row);
+                    console.log("index", index);
+                    setSelectedLedgerId(row.id);
+                    form.setFieldsValue({
+                      id: row.id,
+                      ticker: row.ticker,
+                      status: row.status,
+                      option_type: row.option_type,
+                      open_date: moment(row.open_date, "MM/DD/YY"),
+                      contracts: row.contracts,
+                      strike: row.strike,
+                      credit: row.credit,
+                      expiration: moment(row.expiration, "MM/DD/YY"),
+                      close_date: moment(row.close_date, "MM/DD/YY"),
+                      debit: row.debit,
+                    });
+                  },
+                };
+              }}
             >
               <Column title="Ticker" dataIndex="ticker" key="ticker" />
               <Column title="Type" dataIndex="option_type" key="option_type" />
@@ -250,6 +312,7 @@ function App() {
               onFinish={onFinish}
               onFinishFailed={onFinishFailed}
             >
+              <Form.Item label="Ledger ID" name="id" hidden />
               <Form.Item
                 label="Ticker"
                 name="ticker"
@@ -319,7 +382,7 @@ function App() {
               >
                 <InputNumber
                   formatter={(value) =>
-                    `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                   }
                   parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
                 />
@@ -336,7 +399,7 @@ function App() {
               >
                 <InputNumber
                   formatter={(value) =>
-                    `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                   }
                   parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
                 />
@@ -358,22 +421,47 @@ function App() {
               <Form.Item label="Buy Out" name="debit">
                 <InputNumber
                   formatter={(value) =>
-                    `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                   }
                   parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
                 />
               </Form.Item>
               <Divider />
               <Form.Item>
-                <Button type="primary" htmlType="button">
-                  Submit
-                </Button>
+                {selectedLedgerId === null ? (
+                  <Button type="primary" htmlType="submit">
+                    Submit
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      type="secondary"
+                      htmlType="button"
+                      onClick={onUpdate}
+                    >
+                      Update
+                    </Button>
+                    <Button
+                      type="text"
+                      htmlType="button"
+                      onClick={() => {
+                        form.resetFields();
+                        setSelectedLedgerId(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </>
+                )}
+
                 <Button type="secondary" htmlType="button" onClick={onAnalysis}>
                   Analyse
                 </Button>
               </Form.Item>
             </Form>
+
             <Divider />
+
             <div>
               <Card size="small" title="Analysis Results">
                 <Row gutter={16}>

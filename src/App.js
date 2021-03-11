@@ -75,42 +75,44 @@ function App() {
     );
 
     let columns = [];
-    Object.keys(options[0]).forEach((column) => {
-      if (["key", "id"].includes(column)) return;
+    if (options.length) {
+      Object.keys(options[0]).forEach((column) => {
+        if (["key", "id"].includes(column)) return;
 
-      columns.push({
-        title: column,
-        dataIndex: column,
-        key: column,
+        columns.push({
+          title: column,
+          dataIndex: column,
+          key: column,
+        });
       });
-    });
 
-    setLedgerColumns(columns);
+      setLedgerColumns(columns);
 
-    let optionKey = 0;
-    const transformedOptions = options.map((option) => {
-      return {
-        key: ++optionKey,
-        id: option.id,
-        ticker: option.ticker,
-        status: option.status,
-        contracts: option.contracts,
-        strike: option.strike,
-        open_date: moment(option.open_date).format("MM/DD"),
-        credit: option.credit,
-        debit: option.debit,
-        net_credit: option.net_credit,
-        expiration: moment(option.expiration).format("MM/DD"),
-        close_date: moment(option.close_date).format("MM/DD"),
-        annualized_return: option.annualized_return,
-        daily_return: option.daily_return,
-        option_type: option.option_type,
-        buyout_target: option.buyout_target,
-        target_premium: option.target_premium,
-      };
-    });
+      let optionKey = 0;
+      const transformedOptions = options.map((option) => {
+        return {
+          key: ++optionKey,
+          id: option.id,
+          ticker: option.ticker,
+          status: option.status,
+          contracts: option.contracts,
+          strike: option.strike,
+          open_date: moment(option.open_date).format("MM/DD"),
+          credit: option.credit,
+          debit: option.debit,
+          net_credit: option.net_credit,
+          expiration: moment(option.expiration).format("MM/DD"),
+          close_date: moment(option.close_date).format("MM/DD"),
+          annualized_return: option.annualized_return,
+          daily_return: option.daily_return,
+          option_type: option.option_type,
+          buyout_target: option.buyout_target,
+          target_premium: option.target_premium,
+        };
+      });
 
-    setLedgerData(transformedOptions);
+      setLedgerData(transformedOptions);
+    }
   };
 
   const onFinish = async (values) => {
@@ -150,6 +152,8 @@ function App() {
 
     if (rsp.status === 200) {
       form.resetFields();
+      setSelectedLedgerId(null);
+      fetchLedger();
     }
   };
 
@@ -158,6 +162,9 @@ function App() {
     values.open_date = moment(values.open_date).format(dateFormat);
     values.expiration = moment(values.expiration).format(dateFormat);
     values.close_date = moment(values.close_date).format(dateFormat);
+    values.strike = String(values.strike);
+    values.credit = String(values.credit);
+    values.debit = String(values.debit);
 
     let params = "";
     for (const key in values) {
@@ -181,6 +188,27 @@ function App() {
             ticker
             status
           }
+        }`,
+      }),
+    });
+
+    if (rsp.status === 200) {
+      form.resetFields();
+      setSelectedLedgerId(null);
+      fetchLedger();
+    }
+  };
+
+  const onDelete = async () => {
+    const id = form.getFieldValue("id");
+
+    const rsp = await fetch("http://localhost:4000/graphql", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query: `
+        mutation {
+          deleteOptionLedgerEntry(id:"${id}")
         }`,
       }),
     });
@@ -245,9 +273,6 @@ function App() {
               onRow={(row, index) => {
                 return {
                   onClick: (event) => {
-                    console.log("event", event);
-                    console.log("row", row);
-                    console.log("index", index);
                     setSelectedLedgerId(row.id);
                     form.setFieldsValue({
                       id: row.id,
@@ -256,11 +281,11 @@ function App() {
                       option_type: row.option_type,
                       open_date: moment(row.open_date, "MM/DD/YY"),
                       contracts: row.contracts,
-                      strike: row.strike,
-                      credit: row.credit,
+                      strike: row.strike.replace("$", ""),
+                      credit: row.credit.replace("$", ""),
                       expiration: moment(row.expiration, "MM/DD/YY"),
                       close_date: moment(row.close_date, "MM/DD/YY"),
-                      debit: row.debit,
+                      debit: row.debit.replace("$", ""),
                     });
                   },
                 };
@@ -382,7 +407,7 @@ function App() {
               >
                 <InputNumber
                   formatter={(value) =>
-                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                    `$${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                   }
                   parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
                 />
@@ -399,7 +424,7 @@ function App() {
               >
                 <InputNumber
                   formatter={(value) =>
-                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                    `$${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                   }
                   parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
                 />
@@ -421,7 +446,7 @@ function App() {
               <Form.Item label="Buy Out" name="debit">
                 <InputNumber
                   formatter={(value) =>
-                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                    `$${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                   }
                   parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
                 />
@@ -434,6 +459,7 @@ function App() {
                   </Button>
                 ) : (
                   <>
+                    <Divider type="vertical" />
                     <Button
                       type="secondary"
                       htmlType="button"
@@ -441,6 +467,7 @@ function App() {
                     >
                       Update
                     </Button>
+                    <Divider type="vertical" />
                     <Button
                       type="text"
                       htmlType="button"
@@ -451,9 +478,18 @@ function App() {
                     >
                       Cancel
                     </Button>
+                    <Divider type="vertical" />
+                    <Button
+                      type="link"
+                      danger
+                      htmlType="button"
+                      onClick={onDelete}
+                    >
+                      Remove
+                    </Button>
                   </>
                 )}
-
+                <Divider type="vertical" />
                 <Button type="secondary" htmlType="button" onClick={onAnalysis}>
                   Analyse
                 </Button>

@@ -88,7 +88,101 @@ function Ledger() {
         });
       });
 
-      setLedgerColumns(columns);
+      setLedgerColumns([
+        {
+          title: "Status",
+          dataIndex: "status",
+          filters: options
+            .map((o) => o.status)
+            .filter((item, i, ar) => ar.indexOf(item) === i)
+            .map((v) => ({ text: v, value: v })),
+          onFilter: (value, record) => record.status.indexOf(value) === 0,
+        },
+        {
+          title: "Ticker",
+          dataIndex: "ticker",
+          filters: options
+            .map((o) => o.ticker)
+            .filter((item, i, ar) => ar.indexOf(item) === i)
+            .map((v) => ({ text: v, value: v })),
+          onFilter: (value, record) => record.ticker.indexOf(value) === 0,
+        },
+        {
+          title: "Type",
+          dataIndex: "option_type",
+          filters: options
+            .map((o) => o.option_type)
+            .filter((item, i, ar) => ar.indexOf(item) === i)
+            .map((v) => ({ text: v, value: v })),
+          onFilter: (value, record) => record.option_type.indexOf(value) === 0,
+        },
+        {
+          title: "Contracts",
+          dataIndex: "contracts",
+        },
+        {
+          title: "Strike",
+          dataIndex: "strike",
+        },
+        {
+          title: "Opened",
+          dataIndex: "open_date",
+        },
+        {
+          title: "Premium",
+          dataIndex: "credit",
+          render: (text, record) => {
+            if (text > record.target_premium) {
+              return <span style={{ color: "green" }}>{text}</span>;
+            }
+
+            return <span style={{ color: "red" }}>{text}</span>;
+          },
+        },
+        {
+          title: "Target Premium",
+          dataIndex: "target_premium",
+          render: (text) => <span style={{ color: "grey" }}>{text}</span>,
+        },
+        {
+          title: "Buy Out",
+          dataIndex: "debit",
+        },
+        {
+          title: "Target Buy Out",
+          dataIndex: "buyout_target",
+          render: (text) => <span style={{ color: "grey" }}>{text}</span>,
+        },
+        {
+          title: "Closed",
+          dataIndex: "close_date",
+        },
+        {
+          title: "Expiration",
+          dataIndex: "expiration",
+        },
+        {
+          title: "Collateral",
+          dataIndex: "collateral",
+        },
+        {
+          title: "Days Open",
+          dataIndex: "days_open",
+        },
+        {
+          title: "Daily Return",
+          dataIndex: "daily_return",
+          sorter: (a, b) => a.daily_return - b.daily_return,
+        },
+        {
+          title: "Net",
+          dataIndex: "net_credit",
+        },
+        {
+          title: "Annualized",
+          dataIndex: "annualized_return",
+        },
+      ]);
 
       let optionKey = 0;
       const transformedOptions = options.map((option) => {
@@ -272,16 +366,6 @@ function Ledger() {
 
   return (
     <div>
-      {/* <Row>
-        <Col>
-          Avg Daily Profit:{" "}
-          {JSON.stringify(
-            ledgerData
-              .filter((item) => item.status === "OPEN")
-              .reduce((a, b) => +a.daily_return + +b.daily_return, 0)
-          )}
-        </Col>
-      </Row> */}
       <Row style={{ margin: "10px" }}>
         <Col flex="400px">
           <Form
@@ -566,52 +650,8 @@ function Ledger() {
                 },
               };
             }}
-          >
-            <Column title="Ticker" dataIndex="ticker" key="ticker" />
-            <Column title="Type" dataIndex="option_type" key="option_type" />
-            <Column title="Status" dataIndex="status" key="status" />
-            <Column title="Opened" dataIndex="open_date" key="open_date" />
-            <Column title="Strike" dataIndex="strike" key="strike" />
-            <Column title="Contracts" dataIndex="contracts" key="contracts" />
-            <Column title="Net" dataIndex="net_credit" key="net_credit" />
-            <Column
-              title="Expiration"
-              dataIndex="expiration"
-              key="expiration"
-            />
-            <Column title="Closed" dataIndex="close_date" key="close_date" />
-            <ColumnGroup title="Analysis">
-              <Column
-                title="Annualized"
-                dataIndex="annualized_return"
-                key="annualized_return"
-                render={(data) => (
-                  <span
-                    style={
-                      data > CONSTANTS.TARGETS.PREMIUM_ANNUALIZED
-                        ? { color: "green" }
-                        : { color: "black" }
-                    }
-                  >
-                    {data}%
-                  </span>
-                )}
-              />
-              <Column
-                title="Daily"
-                dataIndex="daily_return"
-                key="daily_return"
-              />
-              <Column title="Days Open" dataIndex="days_open" key="days_open" />
-              <Column title="Premium" dataIndex="credit" key="credit" />
-              <Column title="Buyout" dataIndex="debit" key="debit" />
-              <Column
-                title="Collateral"
-                dataIndex="collateral"
-                key="collateral"
-              />
-            </ColumnGroup>
-          </Table>
+            columns={ledgerColumns}
+          />
         </Col>
       </Row>
     </div>

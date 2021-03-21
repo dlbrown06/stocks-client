@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useHistory } from "react-router-dom";
 import {
   Layout,
   Form,
@@ -13,8 +14,9 @@ import {
   Divider,
   Card,
   Statistic,
+  Drawer,
 } from "antd";
-import { ArrowUpOutlined } from "@ant-design/icons";
+import { ArrowUpOutlined, FileAddOutlined } from "@ant-design/icons";
 import moment from "moment";
 import axios from "axios";
 
@@ -25,14 +27,22 @@ const { Header, Content, Footer, Sider } = Layout;
 const { Option } = Select;
 
 function Ledger() {
+  document.title = "Wheeling Ledger";
   const dateFormat = "MM/DD/YYYY";
+
+  const history = useHistory();
   const [form] = Form.useForm();
   const [selectedLedgerId, setSelectedLedgerId] = useState(null);
   const [ledgerData, setLedgerData] = useState([]);
   const [ledgerColumns, setLedgerColumns] = useState([]);
   const [analysisData, setAnalysisData] = useState({});
+  const [visibleDrawer, setVisibleDrawer] = useState(false);
 
   useEffect(() => {
+    if (!sessionStorage.getItem("token")) {
+      history.push("/login");
+    }
+
     fetchLedger();
   }, []);
 
@@ -129,6 +139,18 @@ function Ledger() {
           dataIndex: "open_date",
         },
         {
+          title: "Closed",
+          dataIndex: "close_date",
+        },
+        {
+          title: "Expiration",
+          dataIndex: "expiration",
+        },
+        {
+          title: "Days Open",
+          dataIndex: "days_open",
+        },
+        {
           title: "Premium",
           dataIndex: "credit",
           render: (text, record) => {
@@ -154,25 +176,19 @@ function Ledger() {
           render: (text) => <span style={{ color: "grey" }}>{text}</span>,
         },
         {
-          title: "Closed",
-          dataIndex: "close_date",
-        },
-        {
-          title: "Expiration",
-          dataIndex: "expiration",
-        },
-        {
           title: "Collateral",
           dataIndex: "collateral",
-        },
-        {
-          title: "Days Open",
-          dataIndex: "days_open",
+          render: (text, record) => {
+            if (record.option_type !== "Covered Call") {
+              return text;
+            }
+          },
         },
         {
           title: "Daily Return",
           dataIndex: "daily_return",
-          sorter: (a, b) => a.daily_return - b.daily_return,
+          sorter: (a, b) =>
+            a.daily_return.replace("$", "") - b.daily_return.replace("$", ""),
         },
         {
           title: "Net",
@@ -181,6 +197,13 @@ function Ledger() {
         {
           title: "Annualized",
           dataIndex: "annualized_return",
+          render: (text) => {
+            if (text > CONSTANTS.TARGETS.PREMIUM_ANNUALIZED) {
+              return <span style={{ color: "green" }}>{text}%</span>;
+            }
+
+            return <span style={{ color: "black" }}>{text}%</span>;
+          },
         },
       ]);
 
@@ -214,13 +237,18 @@ function Ledger() {
   };
 
   const onFinish = async (values) => {
-    values.open_date = moment(values.open_date).format(dateFormat);
-    values.expiration = moment(values.expiration).format(dateFormat);
-    values.close_date = moment(values.close_date).format(dateFormat);
+    values.open_date = values.open_date
+      ? moment(values.open_date).format(dateFormat)
+      : moment().format(dateFormat);
+    values.expiration = values.expiration
+      ? moment(values.expiration).format(dateFormat)
+      : moment().endOf("week").subtract(1, "d").format(dateFormat);
+    values.close_date = values.close_date
+      ? moment(values.close_date).format(dateFormat)
+      : moment().endOf("week").subtract(1, "d").format(dateFormat);
     values.strike = String(values.strike);
     values.credit = String(values.credit);
-    values.debit =
-      values.debit !== undefined ? String(values.debit) : undefined;
+    values.debit = values.debit !== undefined ? String(values.debit) : "0";
 
     let params = "";
     for (const key in values) {
@@ -322,37 +350,38 @@ function Ledger() {
     const {
       contracts,
       credit,
-      debit,
+      debit = 0,
       strike,
       expiration,
       open_date,
-      close_date,
+      close_date = expiration,
     } = form.getFieldsValue();
 
-    //ROUND((((contracts * (credit - debit) * 100)) / (strike * contracts * 100)) * (365 / ((expiration::DATE - open_date::DATE))) * 100) annualized_return,
+    /**
+     *  ({Contracts} * ({Premium} * 100)) / Days Open = Premium Per Day or PPD
+     *  {Contracts} * ({Strike} * 100) = Buying Power Required or BP
+     *  ({PPD} * 360) / {BP} = Annualized
+     */
+    const premiumPerDay =
+      (contracts * credit * 100) / moment(close_date).diff(open_date, "days");
 
     setAnalysisData({
-      gross_credit: (credit - debit) * 100 * contracts,
-      net_credit: (credit - debit) * 100 * contracts * 0.75,
+      gross_credit: credit * 100 * contracts,
+      net_credit: (credit - debit) * 100 * contracts,
       collateral: strike * contracts * 100,
       days_open: moment(expiration).diff(open_date, "days"),
       target_premium:
         strike *
-        ((0.6 * moment(expiration).diff(open_date, "days")) / 365) *
+        ((0.6 * moment(close_date).diff(open_date, "days")) / 360) *
         1.3,
       buyout_target: credit * 0.25,
-      daily_return:
-        (((credit - debit) * contracts) /
-          moment(expiration).diff(open_date, "days")) *
-        100,
+      daily_return: premiumPerDay,
       annualized_return:
-        // ((contracts * (credit - debit) * 100) / (strike * contracts * 100)) *
-        // ((365 / moment(close_date).diff(open_date, "days") + 1) * 100),
-        Math.round(
-          ((contracts * (credit - debit) * 100) / (strike * contracts * 100)) *
-            (365 / (moment(close_date).diff(open_date, "days") + 1)) *
-            100
-        ),
+        ((((contracts * credit * 100) /
+          moment(close_date).diff(open_date, "days")) *
+          360) /
+          (contracts * strike * 100)) *
+        100,
     });
   };
 
@@ -366,264 +395,29 @@ function Ledger() {
 
   return (
     <div>
-      <Row style={{ margin: "10px" }}>
-        <Col flex="400px">
-          <Form
-            name="basic"
-            form={form}
-            onFinish={onFinish}
-            onFinishFailed={onFinishFailed}
-          >
-            <Form.Item label="Ledger ID" name="id" hidden />
-            <Form.Item
-              label="Ticker"
-              name="ticker"
-              rules={[
-                {
-                  required: true,
-                  message: "Please enter the stock ticker!",
-                },
-              ]}
-            >
-              <Input placeholder="Stock Ticker" />
-            </Form.Item>
-            <Form.Item
-              label="Status"
-              name="status"
-              rules={[
-                {
-                  required: true,
-                  message: "Please select the option status!",
-                },
-              ]}
-            >
-              <Select placeholder="Select Option Status">
-                <Option value="OPEN">OPEN</Option>
-                <Option value="CLOSED">CLOSED</Option>
-              </Select>
-            </Form.Item>
-            <Form.Item
-              label="Type"
-              name="option_type"
-              rules={[
-                {
-                  required: true,
-                  message: "Please select the option type!",
-                },
-              ]}
-            >
-              <Select placeholder="Select Option Type">
-                <Option value="Cash Secured Put">Cash Secured Put</Option>
-                <Option value="Covered Call">Covered Call</Option>
-              </Select>
-            </Form.Item>
-
-            <Form.Item
-              label="Open Date"
-              name="open_date"
-              rules={[
-                {
-                  required: true,
-                  message: "Please enter the open date!",
-                },
-              ]}
-            >
-              <DatePicker onChange={onDateChange} format={dateFormat} />
-            </Form.Item>
-
-            <Form.Item
-              label="Contracts"
-              name="contracts"
-              rules={[
-                {
-                  required: true,
-                  message: "Please enter the number of contracts!",
-                },
-              ]}
-            >
-              <InputNumber min={1} max={1000} />
-            </Form.Item>
-
-            <Form.Item
-              label="Strike"
-              name="strike"
-              rules={[
-                {
-                  required: true,
-                  message: "Please enter the strike price!",
-                },
-              ]}
-            >
-              <InputNumber
-                formatter={(value) =>
-                  `$${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                }
-                parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
-              />
-            </Form.Item>
-            <Form.Item
-              label="Premium"
-              name="credit"
-              rules={[
-                {
-                  required: true,
-                  message: "Please enter the premium collected!",
-                },
-              ]}
-            >
-              <InputNumber
-                formatter={(value) =>
-                  `$${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                }
-                parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
-              />
-            </Form.Item>
-            <Form.Item
-              label="Expiration"
-              name="expiration"
-              rules={[
-                {
-                  required: true,
-                  message: "Please enter the expiration!",
-                },
-              ]}
-            >
-              <DatePicker format={dateFormat} onChange={onDateChange} />
-            </Form.Item>
-
-            <Form.Item label="Close Date" name="close_date">
-              <DatePicker format={dateFormat} onChange={onDateChange} />
-            </Form.Item>
-
-            <Form.Item label="Buy Out" name="debit">
-              <InputNumber
-                formatter={(value) =>
-                  `$${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                }
-                parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
-              />
-            </Form.Item>
-            <Divider />
-            <Form.Item>
-              {selectedLedgerId === null ? (
-                <Button type="primary" htmlType="submit">
-                  Submit
-                </Button>
-              ) : (
-                <>
-                  <Divider type="vertical" />
-                  <Button type="secondary" htmlType="button" onClick={onUpdate}>
-                    Update
-                  </Button>
-                  <Divider type="vertical" />
-                  <Button
-                    type="text"
-                    htmlType="button"
-                    onClick={() => {
-                      form.resetFields();
-                      setSelectedLedgerId(null);
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Divider type="vertical" />
-                  <Button
-                    type="link"
-                    danger
-                    htmlType="button"
-                    onClick={onDelete}
-                  >
-                    Remove
-                  </Button>
-                </>
-              )}
-              <Divider type="vertical" />
-              <Button type="secondary" htmlType="button" onClick={onAnalysis}>
-                Analyse
-              </Button>
-            </Form.Item>
-          </Form>
-
-          <Divider />
-
-          <div>
-            <Card size="small" title="Analysis Results">
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Card>
-                    <Statistic
-                      title="Annualized Return"
-                      value={analysisData.annualized_return}
-                      precision={2}
-                      prefix={<ArrowUpOutlined />}
-                      suffix="%"
-                    />
-                  </Card>
-                </Col>
-                <Col span={12}>
-                  <Card>
-                    <Statistic
-                      title="Daily Return"
-                      value={analysisData.daily_return}
-                      precision={2}
-                      prefix="$"
-                    />
-                  </Card>
-                </Col>
-                <Col span={12}>
-                  <Card>
-                    <Statistic
-                      title="Gross Credit"
-                      value={analysisData.gross_credit}
-                      precision={2}
-                      prefix="$"
-                    />
-                  </Card>
-                </Col>
-                <Col span={12}>
-                  <Card>
-                    <Statistic
-                      title="Net Credit"
-                      value={analysisData.net_credit}
-                      precision={2}
-                      prefix="$"
-                    />
-                  </Card>
-                </Col>
-                <Col span={12}>
-                  <Card>
-                    <Statistic
-                      title="Buyout Target"
-                      value={analysisData.buyout_target}
-                      precision={2}
-                      prefix="$"
-                    />
-                  </Card>
-                </Col>
-                <Col span={12}>
-                  <Card>
-                    <Statistic
-                      title="Target Premium"
-                      value={analysisData.target_premium}
-                      precision={2}
-                      prefix="$"
-                    />
-                  </Card>
-                </Col>
-                <Col span={12}>
-                  <Card>
-                    <Statistic
-                      title="Collateral"
-                      value={analysisData.collateral}
-                      precision={2}
-                      prefix="$"
-                    />
-                  </Card>
-                </Col>
-              </Row>
-            </Card>
-          </div>
+      <Row style={{ margin: "5px 10px" }}>
+        <Col span={18}></Col>
+        <Col span={6} style={{ textAlign: "right" }}>
+          <Button
+            size="large"
+            onClick={() => {
+              form.resetFields();
+              onAnalysis();
+              setSelectedLedgerId(null);
+              if (visibleDrawer) {
+                setVisibleDrawer(false);
+              } else {
+                setVisibleDrawer(true);
+              }
+            }}
+            type="primary"
+            shape="circle"
+            icon={<FileAddOutlined />}
+          />
         </Col>
+      </Row>
+      <Row style={{ margin: "10px" }}>
+        <Col></Col>
 
         <Col flex="auto">
           <Table
@@ -647,6 +441,8 @@ function Ledger() {
                     close_date: moment(row.close_date, "MM/DD/YY"),
                     debit: row.debit.replace("$", ""),
                   });
+                  onAnalysis();
+                  setVisibleDrawer(true);
                 },
               };
             }}
@@ -654,6 +450,274 @@ function Ledger() {
           />
         </Col>
       </Row>
+
+      <Drawer
+        title={
+          selectedLedgerId
+            ? "Editing Ledger Option"
+            : "Adding New Ledger Option"
+        }
+        placement="right"
+        closable={false}
+        onClose={() => {
+          form.resetFields();
+          setSelectedLedgerId(null);
+          setVisibleDrawer(false);
+        }}
+        visible={visibleDrawer}
+        width={500}
+      >
+        <Form
+          name="basic"
+          form={form}
+          onFinish={onFinish}
+          onFinishFailed={onFinishFailed}
+        >
+          <Form.Item label="Ledger ID" name="id" hidden />
+          <Form.Item
+            label="Ticker"
+            name="ticker"
+            rules={[
+              {
+                required: true,
+                message: "Please enter the stock ticker!",
+              },
+            ]}
+          >
+            <Input placeholder="Stock Ticker" />
+          </Form.Item>
+          <Form.Item
+            label="Status"
+            name="status"
+            rules={[
+              {
+                required: true,
+                message: "Please select the option status!",
+              },
+            ]}
+          >
+            <Select placeholder="Select Option Status">
+              <Option value="OPEN">OPEN</Option>
+              <Option value="CLOSED">CLOSED</Option>
+            </Select>
+          </Form.Item>
+          <Form.Item
+            label="Type"
+            name="option_type"
+            rules={[
+              {
+                required: true,
+                message: "Please select the option type!",
+              },
+            ]}
+          >
+            <Select placeholder="Select Option Type">
+              <Option value="Cash Secured Put">Cash Secured Put</Option>
+              <Option value="Covered Call">Covered Call</Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item label="Open Date" name="open_date">
+            <DatePicker
+              onChange={onDateChange}
+              format={dateFormat}
+              defaultValue={moment()}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Contracts"
+            name="contracts"
+            rules={[
+              {
+                required: true,
+                message: "Please enter the number of contracts!",
+              },
+            ]}
+          >
+            <InputNumber min={1} max={1000} />
+          </Form.Item>
+
+          <Form.Item
+            label="Strike"
+            name="strike"
+            rules={[
+              {
+                required: true,
+                message: "Please enter the strike price!",
+              },
+            ]}
+          >
+            <InputNumber
+              formatter={(value) =>
+                `$${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+              }
+              parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
+            />
+          </Form.Item>
+          <Form.Item
+            label="Premium"
+            name="credit"
+            rules={[
+              {
+                required: true,
+                message: "Please enter the premium collected!",
+              },
+            ]}
+          >
+            <InputNumber
+              formatter={(value) =>
+                `$${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+              }
+              parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
+            />
+          </Form.Item>
+          <Form.Item label="Expiration" name="expiration">
+            <DatePicker
+              format={dateFormat}
+              onChange={onDateChange}
+              defaultValue={moment().endOf("week").subtract(1, "d")}
+            />
+          </Form.Item>
+
+          <Form.Item label="Close Date" name="close_date">
+            <DatePicker
+              format={dateFormat}
+              onChange={onDateChange}
+              defaultValue={moment().endOf("week").subtract(1, "d")}
+            />
+          </Form.Item>
+
+          <Form.Item label="Buy Out" name="debit">
+            <InputNumber
+              formatter={(value) =>
+                `$${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+              }
+              parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
+              defaultValue="0.00"
+            />
+          </Form.Item>
+          <Divider />
+          <Form.Item>
+            {selectedLedgerId === null ? (
+              <Button type="primary" htmlType="submit">
+                Submit
+              </Button>
+            ) : (
+              <>
+                <Divider type="vertical" />
+                <Button type="secondary" htmlType="button" onClick={onUpdate}>
+                  Update
+                </Button>
+                <Divider type="vertical" />
+                <Button
+                  type="text"
+                  htmlType="button"
+                  onClick={() => {
+                    form.resetFields();
+                    setSelectedLedgerId(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Divider type="vertical" />
+                <Button type="link" danger htmlType="button" onClick={onDelete}>
+                  Remove
+                </Button>
+              </>
+            )}
+            <Divider type="vertical" />
+            <Button type="secondary" htmlType="button" onClick={onAnalysis}>
+              Analyse
+            </Button>
+          </Form.Item>
+        </Form>
+
+        <Divider />
+
+        <div>
+          <Card size="small" title="Analysis Results">
+            <Row gutter={16}>
+              <Col span={12}>
+                <Card>
+                  <Statistic
+                    title="Annualized Return"
+                    value={analysisData.annualized_return}
+                    precision={2}
+                    prefix={<ArrowUpOutlined />}
+                    suffix="%"
+                  />
+                </Card>
+              </Col>
+              <Col span={12}>
+                <Card>
+                  <Statistic
+                    title="Daily Return"
+                    value={analysisData.daily_return}
+                    precision={2}
+                    prefix="$"
+                  />
+                </Card>
+              </Col>
+              <Col span={12}>
+                <Card>
+                  <Statistic
+                    title="Gross Credit"
+                    value={analysisData.gross_credit}
+                    precision={2}
+                    prefix="$"
+                  />
+                </Card>
+              </Col>
+              <Col span={12}>
+                <Card>
+                  <Statistic
+                    title="Net Credit"
+                    value={analysisData.net_credit}
+                    precision={2}
+                    prefix="$"
+                  />
+                </Card>
+              </Col>
+              <Col span={12}>
+                <Card>
+                  <Statistic
+                    title="Buyout Target"
+                    value={analysisData.buyout_target}
+                    precision={2}
+                    prefix="$"
+                  />
+                </Card>
+              </Col>
+              <Col span={12}>
+                <Card>
+                  <Statistic
+                    title="Target Premium"
+                    value={analysisData.target_premium}
+                    precision={2}
+                    prefix="$"
+                  />
+                </Card>
+              </Col>
+              <Col span={12}>
+                <Card>
+                  <Statistic
+                    title="Collateral"
+                    value={analysisData.collateral}
+                    precision={2}
+                    prefix="$"
+                  />
+                </Card>
+              </Col>
+              <Col span={12}>
+                <Card>
+                  <Statistic title="Days Open" value={analysisData.days_open} />
+                </Card>
+              </Col>
+            </Row>
+          </Card>
+        </div>
+      </Drawer>
     </div>
   );
 }

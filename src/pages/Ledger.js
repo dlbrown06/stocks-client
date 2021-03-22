@@ -38,12 +38,15 @@ function Ledger({ member, token }) {
   const [analysisData, setAnalysisData] = useState({});
   const [visibleDrawer, setVisibleDrawer] = useState(false);
 
+  const [monthPnL, setMonthPnL] = useState(0);
+  const [monthPnLTickers, setMonthPnLTickers] = useState([]);
+
   useEffect(() => {
     fetchLedger();
+    fetchLedgerPNL();
   }, []);
 
   const fetchLedger = async () => {
-    console.log(token, "token");
     const rsp = await axios({
       method: "POST",
       url: "http://localhost:4000/graphql",
@@ -239,6 +242,45 @@ function Ledger({ member, token }) {
     }
   };
 
+  const fetchLedgerPNL = async () => {
+    const rsp = await axios({
+      method: "POST",
+      url: "http://localhost:4000/graphql",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      data: JSON.stringify({
+        query: `
+        query {
+          getOptionMonthlyPNL {
+            month
+            ticker
+            credit
+            debit
+            total
+          }
+        }`,
+      }),
+    });
+
+    const pnl = rsp.data.data.getOptionMonthlyPNL;
+    if (!pnl) {
+      return;
+    }
+
+    setMonthPnL(
+      pnl
+        .filter((i) => i.month === moment().format("YYYY-MM"))
+        .map((i) => i.total.replace(/\$|\,/g, ""))
+        .reduce((t, i) => +t + +i)
+    );
+
+    setMonthPnLTickers(
+      pnl.filter((i) => i.month === moment().format("YYYY-MM"))
+    );
+  };
+
   const onFinish = async (values) => {
     values.open_date = values.open_date
       ? moment(values.open_date).format(dateFormat)
@@ -408,7 +450,23 @@ function Ledger({ member, token }) {
   return (
     <div>
       <Row style={{ margin: "5px 10px" }}>
-        <Col span={18}></Col>
+        <Col span={18}>
+          <Statistic
+            style={{ margin: "10px", display: "inline-table" }}
+            title="Total"
+            value={monthPnL}
+            prefix="$"
+          />
+
+          <Divider type="vertical" />
+          {monthPnLTickers.map((i) => (
+            <Statistic
+              style={{ margin: "10px", display: "inline-table" }}
+              title={i.ticker}
+              value={i.total}
+            />
+          ))}
+        </Col>
         <Col span={6} style={{ textAlign: "right" }}>
           <Button
             size="large"

@@ -364,9 +364,9 @@ function Ledger({ member, token }) {
       credit,
       debit = 0,
       strike,
-      expiration,
-      open_date,
-      close_date = expiration,
+      open_date = moment().format(dateFormat),
+      expiration = moment().endOf("week").subtract(1, "d").format(dateFormat),
+      close_date = moment().endOf("week").subtract(1, "d").format(dateFormat),
     } = form.getFieldsValue();
 
     /**

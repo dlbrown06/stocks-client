@@ -53,13 +53,14 @@ export default function App() {
 
   return (
     <AppContainer>
-      <SideBar>
-        <SideBarItem>
+      <SideBar key={token}>
+        <SideBarItem to="/">
           <ReloadOutlined spin />
         </SideBarItem>
         {token ? (
           <>
             <SideBarItem
+              to="#"
               onClick={() => {
                 sessionStorage.removeItem("member");
                 sessionStorage.removeItem("token");

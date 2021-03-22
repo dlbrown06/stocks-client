@@ -26,7 +26,7 @@ const { Column, ColumnGroup } = Table;
 const { Header, Content, Footer, Sider } = Layout;
 const { Option } = Select;
 
-function Ledger() {
+function Ledger({ member, token }) {
   document.title = "Wheeling Ledger";
   const dateFormat = "MM/DD/YYYY";
 
@@ -39,18 +39,18 @@ function Ledger() {
   const [visibleDrawer, setVisibleDrawer] = useState(false);
 
   useEffect(() => {
-    if (!sessionStorage.getItem("token")) {
-      history.push("/login");
-    }
-
     fetchLedger();
   }, []);
 
   const fetchLedger = async () => {
+    console.log(token, "token");
     const rsp = await axios({
       method: "POST",
       url: "http://localhost:4000/graphql",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
       data: JSON.stringify({
         query: `
         query {
@@ -80,6 +80,9 @@ function Ledger() {
     });
 
     const optionLedger = rsp.data.data.getOptionLedger;
+    if (!optionLedger) {
+      return;
+    }
 
     let key = 0;
     const options = optionLedger.map((option) =>
@@ -264,7 +267,10 @@ function Ledger() {
 
     const rsp = await fetch("http://localhost:4000/graphql", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({
         query: `
         mutation {
@@ -306,7 +312,10 @@ function Ledger() {
 
     const rsp = await fetch("http://localhost:4000/graphql", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({
         query: `
         mutation {
@@ -330,7 +339,10 @@ function Ledger() {
 
     const rsp = await fetch("http://localhost:4000/graphql", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({
         query: `
         mutation {

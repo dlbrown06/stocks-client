@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useHistory } from "react-router-dom";
 import {
-  Layout,
   Form,
   Input,
   Button,
@@ -21,16 +19,12 @@ import moment from "moment";
 import axios from "axios";
 
 import CONSTANTS from "../config/constants";
-
-const { Column, ColumnGroup } = Table;
-const { Header, Content, Footer, Sider } = Layout;
 const { Option } = Select;
 
 function Ledger({ member, token }) {
   document.title = "Wheeling Ledger";
   const dateFormat = "MM/DD/YYYY";
 
-  const history = useHistory();
   const [form] = Form.useForm();
   const [selectedLedgerId, setSelectedLedgerId] = useState(null);
   const [ledgerData, setLedgerData] = useState([]);
@@ -42,6 +36,10 @@ function Ledger({ member, token }) {
   const [monthPnLTickers, setMonthPnLTickers] = useState([]);
 
   useEffect(() => {
+    if (!token) {
+      // history.push("/login");
+      return;
+    }
     fetchLedger();
     fetchLedgerPNL();
   }, []);
@@ -273,7 +271,7 @@ function Ledger({ member, token }) {
       pnl
         .filter((i) => i.month === moment().format("YYYY-MM"))
         .map((i) => i.total.replace(/\$|\,/g, ""))
-        .reduce((t, i) => +t + +i)
+        .reduce((t, i) => +t + +i, [])
     );
 
     setMonthPnLTickers(

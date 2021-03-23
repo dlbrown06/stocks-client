@@ -4,7 +4,7 @@ import { Switch, Route } from "react-router-dom";
 import Ledger from "./Ledger";
 import Login from "./Login";
 
-const Main = ({ token, member }) => {
+const Main = ({ token, member, login, logout }) => {
   return (
     <Switch>
       {" "}
@@ -19,9 +19,9 @@ const Main = ({ token, member }) => {
       <Route
         exact
         path="/login"
-        component={Login}
-        member={member}
-        token={token}
+        render={(props) => (
+          <Login {...props} login={login} token={token} key={token} />
+        )}
       ></Route>
     </Switch>
   );

@@ -16,11 +16,12 @@ const LoginContainer = styled.div`
   }
 `;
 
-export default function App() {
+export default function Login({ token, login }) {
   document.title = "Login to the Wheel";
   const history = useHistory();
+
   useEffect(() => {
-    if (sessionStorage.getItem("token")) {
+    if (token) {
       history.push("/");
     }
   }, []);
@@ -29,7 +30,7 @@ export default function App() {
     <>
       <LoginContainer>
         <Title>Login to the Wheel</Title>
-        <FormLogin />
+        <FormLogin login={login} />
       </LoginContainer>
     </>
   );

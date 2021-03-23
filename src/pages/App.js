@@ -9,6 +9,7 @@ import {
 } from "@ant-design/icons";
 import axios from "axios";
 
+import { GRAPHQL } from "../config/constants";
 import Main from "./Main";
 
 const AppContainer = styled.div`
@@ -55,7 +56,7 @@ export default function App() {
   const login = async (values) => {
     const rsp = await axios({
       method: "POST",
-      url: "http://localhost:4000/graphql",
+      url: GRAPHQL.URL,
       headers: { "Content-Type": "application/json" },
       data: JSON.stringify({
         query: `

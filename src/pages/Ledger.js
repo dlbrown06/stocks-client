@@ -243,7 +243,7 @@ function Ledger({ member, token }) {
   const fetchLedgerPNL = async () => {
     const rsp = await axios({
       method: "POST",
-      url: "http://localhost:4000/graphql",
+      url: CONSTANTS.GRAPHQL.URL,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
@@ -305,7 +305,7 @@ function Ledger({ member, token }) {
       }
     }
 
-    const rsp = await fetch("http://localhost:4000/graphql", {
+    const rsp = await fetch(CONSTANTS.GRAPHQL.URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -350,7 +350,7 @@ function Ledger({ member, token }) {
       }
     }
 
-    const rsp = await fetch("http://localhost:4000/graphql", {
+    const rsp = await fetch(CONSTANTS.GRAPHQL.URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -377,7 +377,7 @@ function Ledger({ member, token }) {
   const onDelete = async () => {
     const id = form.getFieldValue("id");
 
-    const rsp = await fetch("http://localhost:4000/graphql", {
+    const rsp = await fetch(CONSTANTS.GRAPHQL.URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

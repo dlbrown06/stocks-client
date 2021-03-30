@@ -5,11 +5,14 @@ const { Text } = Typography;
 
 export default function FormLogin({ login }) {
   const [formErrors, setFormErrors] = useState([]);
+  const [formMessages, setFormMessages] = useState([]);
 
   const onFinish = async (values) => {
+    setFormMessages(["Logging user in now..."]);
     const errors = await login(values);
     if (errors) {
       setFormErrors(errors.map((e) => e.message));
+      setFormMessages([]);
     }
   };
 
@@ -44,10 +47,21 @@ export default function FormLogin({ login }) {
       >
         <Input.Password />
       </Form.Item>
+      {formMessages.length > 0 ? (
+        <div>
+          {formMessages.map((e, key) => (
+            <Text type="primary" key={key}>
+              {e}
+            </Text>
+          ))}
+        </div>
+      ) : null}
       {formErrors.length > 0 ? (
         <div>
-          {formErrors.map((e) => (
-            <Text type="danger">{e}</Text>
+          {formErrors.map((e, key) => (
+            <Text type="danger" key={key}>
+              {e}
+            </Text>
           ))}
         </div>
       ) : null}

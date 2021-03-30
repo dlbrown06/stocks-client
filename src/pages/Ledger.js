@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useHistory } from "react-router-dom";
 import {
   Form,
   Input,
@@ -22,6 +23,7 @@ import CONSTANTS from "../config/constants";
 const { Option } = Select;
 
 function Ledger({ member, token }) {
+  const history = useHistory();
   document.title = "Wheeling Ledger";
   const dateFormat = "MM/DD/YYYY";
 
@@ -37,7 +39,7 @@ function Ledger({ member, token }) {
 
   useEffect(() => {
     if (!token) {
-      // history.push("/login");
+      history.push("/login");
       return;
     }
     fetchLedger();

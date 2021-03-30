@@ -50,6 +50,10 @@ export default function App() {
     if (sessionToken) {
       setToken(sessionToken);
       setMember(JSON.parse(sessionMember));
+    } else {
+      if (history.location.pathname !== "/login") {
+        history.push("/login");
+      }
     }
   }, []);
 

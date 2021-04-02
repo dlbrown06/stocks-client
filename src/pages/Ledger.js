@@ -14,8 +14,9 @@ import {
   Card,
   Statistic,
   Drawer,
+  PageHeader,
 } from "antd";
-import { ArrowUpOutlined, FileAddOutlined } from "@ant-design/icons";
+import { ArrowUpOutlined, PlusCircleTwoTone } from "@ant-design/icons";
 import moment from "moment";
 import axios from "axios";
 
@@ -35,6 +36,7 @@ function Ledger({ member, token }) {
   const [visibleDrawer, setVisibleDrawer] = useState(false);
 
   const [monthPnL, setMonthPnL] = useState(0);
+  const [monthlyPnL, setMonthlyPnL] = useState([]);
   const [monthPnLTickers, setMonthPnLTickers] = useState([]);
 
   useEffect(() => {
@@ -44,6 +46,7 @@ function Ledger({ member, token }) {
     }
     fetchLedger();
     fetchLedgerPNL();
+    fetchLedgerPNLbyTicker();
   }, []);
 
   const fetchLedger = async () => {
@@ -106,15 +109,18 @@ function Ledger({ member, token }) {
 
       setLedgerColumns([
         {
+          key: "status",
           title: "Status",
           dataIndex: "status",
+          // filteredValue: ["OPEN"],
           filters: options
             .map((o) => o.status)
             .filter((item, i, ar) => ar.indexOf(item) === i)
             .map((v) => ({ text: v, value: v })),
-          onFilter: (value, record) => record.status.indexOf(value) === 0,
+          onFilter: (value, record) => record.status.includes(value),
         },
         {
+          key: "ticker",
           title: "Ticker",
           dataIndex: "ticker",
           filters: options
@@ -124,6 +130,7 @@ function Ledger({ member, token }) {
           onFilter: (value, record) => record.ticker.indexOf(value) === 0,
         },
         {
+          key: "option_type",
           title: "Type",
           dataIndex: "option_type",
           filters: options
@@ -133,32 +140,41 @@ function Ledger({ member, token }) {
           onFilter: (value, record) => record.option_type.indexOf(value) === 0,
         },
         {
+          key: "contracts",
           title: "Contracts",
           dataIndex: "contracts",
         },
         {
+          key: "strike",
           title: "Strike",
           dataIndex: "strike",
         },
         {
+          key: "open_date",
           title: "Opened",
           dataIndex: "open_date",
         },
         {
+          key: "close_date",
           title: "Closed",
           dataIndex: "close_date",
         },
         {
+          key: "expiration",
           title: "Expiration",
           dataIndex: "expiration",
         },
         {
+          key: "days_open",
           title: "Days Open",
           dataIndex: "days_open",
+          responsive: ["xl"],
         },
         {
+          key: "credit",
           title: "Premium",
           dataIndex: "credit",
+          responsive: ["xl"],
           render: (text, record) => {
             if (text > record.target_premium) {
               return <span style={{ color: "green" }}>{text}</span>;
@@ -168,22 +184,30 @@ function Ledger({ member, token }) {
           },
         },
         {
+          key: "target_premium",
           title: "Target Premium",
           dataIndex: "target_premium",
+          responsive: ["xl"],
           render: (text) => <span style={{ color: "grey" }}>{text}</span>,
         },
         {
+          key: "debit",
           title: "Buy Out",
           dataIndex: "debit",
+          responsive: ["xl"],
         },
         {
+          key: "buyout_target",
           title: "Target Buy Out",
           dataIndex: "buyout_target",
+          responsive: ["xl"],
           render: (text) => <span style={{ color: "grey" }}>{text}</span>,
         },
         {
+          key: "collateral",
           title: "Collateral",
           dataIndex: "collateral",
+          responsive: ["xl"],
           render: (text, record) => {
             if (record.option_type !== "Covered Call") {
               return text;
@@ -191,18 +215,27 @@ function Ledger({ member, token }) {
           },
         },
         {
+          key: "daily_return",
           title: "Daily Return",
           dataIndex: "daily_return",
+          responsive: ["xl"],
           sorter: (a, b) =>
             a.daily_return.replace("$", "") - b.daily_return.replace("$", ""),
         },
         {
+          key: "net_credit",
           title: "Net",
           dataIndex: "net_credit",
+          responsive: ["xl"],
         },
         {
+          key: "annualized_return",
           title: "Annualized",
           dataIndex: "annualized_return",
+          responsive: ["xl"],
+          sorter: (a, b) =>
+            a.annualized_return.replace("%", "") -
+            b.annualized_return.replace("%", ""),
           render: (text) => {
             if (text > CONSTANTS.TARGETS.PREMIUM_ANNUALIZED) {
               return <span style={{ color: "green" }}>{text}%</span>;
@@ -242,7 +275,7 @@ function Ledger({ member, token }) {
     }
   };
 
-  const fetchLedgerPNL = async () => {
+  const fetchLedgerPNLbyTicker = async () => {
     const rsp = await axios({
       method: "POST",
       url: CONSTANTS.GRAPHQL.URL,
@@ -253,7 +286,7 @@ function Ledger({ member, token }) {
       data: JSON.stringify({
         query: `
         query {
-          getOptionMonthlyPNL {
+          getOptionMonthlyPNLbyTicker {
             month
             ticker
             credit
@@ -264,7 +297,7 @@ function Ledger({ member, token }) {
       }),
     });
 
-    const pnl = rsp.data.data.getOptionMonthlyPNL;
+    const pnl = rsp.data.data.getOptionMonthlyPNLbyTicker;
     if (!pnl) {
       return;
     }
@@ -279,6 +312,46 @@ function Ledger({ member, token }) {
     setMonthPnLTickers(
       pnl.filter((i) => i.month === moment().format("YYYY-MM"))
     );
+  };
+
+  const fetchLedgerPNL = async () => {
+    const rsp = await axios({
+      method: "POST",
+      url: CONSTANTS.GRAPHQL.URL,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      data: JSON.stringify({
+        query: `
+        query {
+          getOptionMonthlyPNL {
+            month
+            credit
+            debit
+            total
+          }
+        }`,
+      }),
+    });
+
+    const pnl = rsp.data.data.getOptionMonthlyPNL;
+    if (!pnl) {
+      return;
+    }
+
+    setMonthlyPnL(pnl);
+
+    // setMonthyPnL(
+    //   pnl
+    //     .filter((i) => i.month === moment().format("YYYY-MM"))
+    //     .map((i) => i.total.replace(/\$|\,/g, ""))
+    //     .reduce((t, i) => +t + +i, [])
+    // );
+
+    // setMonthPnLTickers(
+    //   pnl.filter((i) => i.month === moment().format("YYYY-MM"))
+    // );
   };
 
   const onFinish = async (values) => {
@@ -449,8 +522,26 @@ function Ledger({ member, token }) {
 
   return (
     <div>
-      <Row style={{ margin: "5px 10px" }}>
-        <Col span={18}>
+      <PageHeader
+        // onBack={() => null}
+        title="The Wheel Ledger"
+        subTitle="Open Plays"
+      />
+
+      <Row>
+        <Col span={12}>
+          <Divider orientation="left">Monthly Wheel Profit</Divider>
+          {monthlyPnL.map((i, key) => (
+            <Statistic
+              key={key}
+              style={{ margin: "10px", display: "inline-table" }}
+              title={i.month}
+              value={i.total}
+            />
+          ))}
+        </Col>
+        <Col span={12} style={{ textAlign: "right" }}>
+          <Divider orientation="right">Profit this Month by Ticker</Divider>
           <Statistic
             style={{ margin: "10px", display: "inline-table" }}
             title="Total"
@@ -459,41 +550,43 @@ function Ledger({ member, token }) {
           />
 
           <Divider type="vertical" />
-          {monthPnLTickers.map((i) => (
+          {monthPnLTickers.map((i, key) => (
             <Statistic
+              key={key}
               style={{ margin: "10px", display: "inline-table" }}
               title={i.ticker}
               value={i.total}
             />
           ))}
         </Col>
-        <Col span={6} style={{ textAlign: "right" }}>
-          <Button
-            size="large"
-            onClick={() => {
-              form.resetFields();
-              onAnalysis();
-              setSelectedLedgerId(null);
-              if (visibleDrawer) {
-                setVisibleDrawer(false);
-              } else {
-                setVisibleDrawer(true);
-              }
-            }}
-            type="primary"
-            shape="circle"
-            icon={<FileAddOutlined />}
-          />
+      </Row>
+
+      <Row>
+        <Col span={24}>
+          <Divider orientation="left">
+            Open Plays{" "}
+            <PlusCircleTwoTone
+              onClick={() => {
+                form.resetFields();
+                onAnalysis();
+                setSelectedLedgerId(null);
+                if (visibleDrawer) {
+                  setVisibleDrawer(false);
+                } else {
+                  setVisibleDrawer(true);
+                }
+              }}
+            />
+          </Divider>
         </Col>
       </Row>
-      <Row style={{ margin: "10px" }}>
-        <Col></Col>
 
+      <Row style={{ margin: "10px" }}>
         <Col flex="auto">
           <Table
             dataSource={ledgerData}
             size="small"
-            pagination={{ pageSize: 100 }}
+            pagination={{ total: ledgerData.length, defaultPageSize: 10 }}
             onRow={(row, index) => {
               return {
                 onClick: (event) => {

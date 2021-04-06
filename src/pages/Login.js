@@ -17,7 +17,7 @@ const LoginContainer = styled.div`
 `;
 
 export default function Login({ token, login }) {
-  document.title = "Login to the Wheel";
+  document.title = "Login to the Wheel Ledger";
   const history = useHistory();
 
   useEffect(() => {
@@ -29,7 +29,7 @@ export default function Login({ token, login }) {
   return (
     <>
       <LoginContainer>
-        <Title>Login to the Wheel</Title>
+        <Title>The Wheel Ledger</Title>
         <FormLogin login={login} />
       </LoginContainer>
     </>

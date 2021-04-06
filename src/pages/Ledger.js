@@ -25,8 +25,8 @@ const { Option } = Select;
 
 function Ledger({ member, token }) {
   const history = useHistory();
-  document.title = "Wheeling Ledger";
   const dateFormat = "MM/DD/YYYY";
+  document.title = "Wheel Ledger";
 
   const [form] = Form.useForm();
   const [selectedLedgerId, setSelectedLedgerId] = useState(null);

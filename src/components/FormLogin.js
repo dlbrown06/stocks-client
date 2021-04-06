@@ -1,4 +1,5 @@
 import { Form, Input, Button, Typography } from "antd";
+import { LoginOutlined, SyncOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 
 const { Text } = Typography;
@@ -47,15 +48,6 @@ export default function FormLogin({ login }) {
       >
         <Input.Password />
       </Form.Item>
-      {formMessages.length > 0 ? (
-        <div>
-          {formMessages.map((e, key) => (
-            <Text type="primary" key={key}>
-              {e}
-            </Text>
-          ))}
-        </div>
-      ) : null}
       {formErrors.length > 0 ? (
         <div>
           {formErrors.map((e, key) => (
@@ -66,8 +58,24 @@ export default function FormLogin({ login }) {
         </div>
       ) : null}
       <Form.Item>
-        <Button type="primary" htmlType="submit">
-          Submit
+        <Button
+          type="primary"
+          htmlType="submit"
+          disabled={formMessages.length || formErrors.length}
+        >
+          {formMessages.length ? (
+            <>
+              {formMessages.map((e, key) => (
+                <Text type="primary" key={key}>
+                  <SyncOutlined spin /> {e}
+                </Text>
+              ))}
+            </>
+          ) : (
+            <>
+              <LoginOutlined /> Login
+            </>
+          )}
         </Button>
       </Form.Item>
     </Form>

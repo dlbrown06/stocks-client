@@ -1,41 +1,29 @@
-import { Link, useHistory } from "react-router-dom";
+import { useHistory } from "react-router-dom";
 import styled from "styled-components";
 import React, { useState, useEffect } from "react";
-import {
-  SettingFilled,
-  BankOutlined,
-  LoginOutlined,
-  LogoutOutlined,
-} from "@ant-design/icons";
+import { LogoutOutlined } from "@ant-design/icons";
+import { Button, Divider } from "antd";
 import axios from "axios";
 
 import { GRAPHQL } from "../config/constants";
 import Main from "./Main";
 
-const AppContainer = styled.div`
+const AppContainer = styled.section`
   height: 100%;
   width: 100%;
 `;
 
-const SideBar = styled.div`
-  background-color: black;
-  color: white;
-  min-height: 100%;
-  width: 50px;
-  text-align: center;
-  padding-top: 10px;
-  font-size: 20px;
-  float: left;
+const Header = styled.div`
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
 `;
 
-const SideBarItem = styled(Link)`
-  padding: 10px;
-  color: white;
-`;
+const HeaderItem = styled(Button)``;
 
 const MainContainer = styled.div`
-  width: calc(100% - 50px);
-  float: right;
+  width: 100%;
   min-height: 100%;
 `;
 
@@ -105,27 +93,23 @@ export default function App() {
     history.push("/login");
   };
 
+  document.title = "Welcome to the Wheel";
+
   return (
     <AppContainer>
-      <SideBar key={token}>
-        <SideBarItem to="/">
-          <SettingFilled />
-        </SideBarItem>
+      <Header>
         {token ? (
           <>
-            <SideBarItem to="#" onClick={logout}>
+            {/* <HeaderItem to="#" onClick={logout} type="primary" shape="circle">
               <LogoutOutlined />
-            </SideBarItem>
-            <SideBarItem to="/">
-              <BankOutlined />
-            </SideBarItem>
+            </HeaderItem>
+            <Divider type="vertical" /> */}
+            <HeaderItem to="#" onClick={logout} type="primary" shape="circle">
+              <LogoutOutlined />
+            </HeaderItem>
           </>
-        ) : (
-          <SideBarItem to="/login">
-            <LoginOutlined />
-          </SideBarItem>
-        )}
-      </SideBar>
+        ) : null}
+      </Header>
       <MainContainer>
         <Main token={token} member={member} key={token} login={login} />
       </MainContainer>

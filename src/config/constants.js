@@ -7,4 +7,5 @@ module.exports = {
     PREMIUM_ANNUALIZED: 60, // targeting 60% annualized gains on each trade
     EARLY_CLOSE: 0.75, // cut out early
   },
+  OPTION_STATUSES: ["OPEN", "CLOSED", "BOUGHT TO CLOSE", "EXPIRED", "ASSIGNED"],
 };

@@ -112,7 +112,6 @@ function Ledger({ member, token }) {
           key: "status",
           title: "Status",
           dataIndex: "status",
-          // filteredValue: ["OPEN"],
           filters: options
             .map((o) => o.status)
             .filter((item, i, ar) => ar.indexOf(item) === i)
@@ -660,8 +659,11 @@ function Ledger({ member, token }) {
             ]}
           >
             <Select placeholder="Select Option Status">
-              <Option value="OPEN">OPEN</Option>
-              <Option value="CLOSED">CLOSED</Option>
+              {CONSTANTS.OPTION_STATUSES.map((v, k) => (
+                <Option value={v} key={k}>
+                  {v}
+                </Option>
+              ))}
             </Select>
           </Form.Item>
           <Form.Item

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useHistory } from "react-router-dom";
+import { useHistory, Link } from "react-router-dom";
 import {
   Form,
   Input,
@@ -127,6 +127,7 @@ function Ledger({ member, token }) {
             .filter((item, i, ar) => ar.indexOf(item) === i)
             .map((v) => ({ text: v, value: v })),
           onFilter: (value, record) => record.ticker.indexOf(value) === 0,
+          render: (text) => <Link to={`/ticker/${text}`}>{text}</Link>,
         },
         {
           key: "option_type",

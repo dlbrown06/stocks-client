@@ -10,6 +10,7 @@ export default function FormLogin({ login }) {
 
   const onFinish = async (values) => {
     setFormMessages(["Logging user in now..."]);
+    setFormErrors([]);
     const errors = await login(values);
     if (errors) {
       setFormErrors(errors.map((e) => e.message));
@@ -48,21 +49,9 @@ export default function FormLogin({ login }) {
       >
         <Input.Password />
       </Form.Item>
-      {formErrors.length > 0 ? (
-        <div>
-          {formErrors.map((e, key) => (
-            <Text type="danger" key={key}>
-              {e}
-            </Text>
-          ))}
-        </div>
-      ) : null}
+
       <Form.Item>
-        <Button
-          type="primary"
-          htmlType="submit"
-          disabled={formMessages.length || formErrors.length}
-        >
+        <Button type="primary" htmlType="submit" disabled={formMessages.length}>
           {formMessages.length ? (
             <>
               {formMessages.map((e, key) => (
@@ -77,6 +66,16 @@ export default function FormLogin({ login }) {
             </>
           )}
         </Button>
+
+        {formErrors.length > 0 ? (
+          <span style={{ marginLeft: "10px" }}>
+            {formErrors.map((e, key) => (
+              <Text type="danger" key={key}>
+                {e}
+              </Text>
+            ))}
+          </span>
+        ) : null}
       </Form.Item>
     </Form>
   );

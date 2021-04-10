@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useHistory } from "react-router-dom";
+import { useHistory, Link } from "react-router-dom";
 import {
   Form,
   Input,
@@ -14,9 +14,10 @@ import {
   Card,
   Statistic,
   Drawer,
+  Badge,
   PageHeader,
 } from "antd";
-import { ArrowUpOutlined, PlusCircleTwoTone } from "@ant-design/icons";
+import { CalculatorTwoTone } from "@ant-design/icons";
 import moment from "moment";
 import axios from "axios";
 
@@ -35,7 +36,11 @@ function Ticker({
   document.title = "Wheel Ledger";
 
   const [ledgerData, setLedgerData] = useState([]);
+  const [visibleCostAvgCalc, setVisibleCostAvgCalc] = useState(false);
   const [ledgerColumns, setLedgerColumns] = useState([]);
+  const [assignmentSummary, setAssignmentSummary] = useState(null);
+  const [calcStrike, setCalcStrike] = useState(0);
+  const [calcContracts, setCalcContracts] = useState(0);
 
   useEffect(() => {
     if (!token) {
@@ -91,6 +96,42 @@ function Ticker({
       Object.assign(option, { key: ++key })
     );
 
+    const assignments = optionLedger
+      .filter((o) => o.status === "ASSIGNED")
+      .sort((a, b) => moment(a.close_date) - moment(b.close_date));
+
+    let collateral = 0;
+    let contracts = 0;
+    for (const ticker of assignments) {
+      if (ticker.option_type === "Cash Secured Put") {
+        collateral += parseFloat(ticker.collateral.replace(/[^0-9\.-]+/g, ""));
+        contracts += ticker.contracts;
+      } else if (ticker.option_type === "Covered Call") {
+        collateral -= parseFloat(ticker.collateral.replace(/[^0-9\.-]+/g, ""));
+        contracts -= ticker.contracts;
+      }
+    }
+    if (contracts) {
+      const totalPremium = optionLedger
+        .filter((o) => o.status === "BOUGHT TO CLOSE")
+        .map(
+          (o) =>
+            (o.credit.replace(/[^0-9\.-]+/g, "") -
+              o.debit.replace(/[^0-9\.-]+/g, "")) *
+            o.contracts *
+            100
+        )
+        .reduce((a, b) => a + b);
+
+      setAssignmentSummary({
+        totalPremium,
+        contracts,
+        collateral,
+        costBasis: collateral / contracts / 100,
+        costBasisWithPremium: (collateral - totalPremium) / contracts / 100,
+      });
+    }
+
     let columns = [];
     if (options.length) {
       Object.keys(options[0]).forEach((column) => {
@@ -113,16 +154,6 @@ function Ticker({
             .filter((item, i, ar) => ar.indexOf(item) === i)
             .map((v) => ({ text: v, value: v })),
           onFilter: (value, record) => record.status.includes(value),
-        },
-        {
-          key: "ticker",
-          title: "Ticker",
-          dataIndex: "ticker",
-          filters: options
-            .map((o) => o.ticker)
-            .filter((item, i, ar) => ar.indexOf(item) === i)
-            .map((v) => ({ text: v, value: v })),
-          onFilter: (value, record) => record.ticker.indexOf(value) === 0,
         },
         {
           key: "option_type",
@@ -278,6 +309,66 @@ function Ticker({
         subTitle="Performance"
       />
 
+      {assignmentSummary ? (
+        <>
+          <Row>
+            <Col span={24}>
+              <Divider orientation="left">Ticker Summary Performance</Divider>
+            </Col>
+          </Row>
+          <Row gutter={[16, 16]} justify="center">
+            <Col span={22}>
+              <Badge.Ribbon text={`${assignmentSummary.contracts} Contracts`}>
+                <Card>
+                  <Row style={{ textAlign: "center" }}>
+                    <Col md={6} sm={12} xs={12}>
+                      <Statistic
+                        title="Buying Power Used"
+                        value={assignmentSummary.collateral}
+                        prefix="$"
+                      />
+                    </Col>
+                    <Col md={6} sm={12} xs={12}>
+                      <Statistic
+                        title={
+                          <span>
+                            Cost Basis{" "}
+                            <CalculatorTwoTone
+                              style={{ cursor: "pointer" }}
+                              onClick={() => setVisibleCostAvgCalc(true)}
+                            />
+                          </span>
+                        }
+                        value={assignmentSummary.costBasis}
+                        precision={2}
+                        prefix="$"
+                      />
+                    </Col>
+                    <Col md={6} sm={12} xs={12}>
+                      <Statistic
+                        title="Total Premium"
+                        value={assignmentSummary.totalPremium}
+                        prefix="$"
+                      />
+                    </Col>
+                    <Col md={6} sm={12} xs={12}>
+                      <Statistic
+                        title="Cost Basis w/ Premium"
+                        value={assignmentSummary.costBasisWithPremium}
+                        precision={2}
+                        prefix="$"
+                      />
+                    </Col>
+                  </Row>
+                </Card>
+              </Badge.Ribbon>
+            </Col>
+          </Row>
+        </>
+      ) : null}
+
+      <Divider orientation="left">Ticker Ledger</Divider>
+
       <Row style={{ margin: "10px" }}>
         <Col flex="auto">
           <Table
@@ -288,6 +379,89 @@ function Ticker({
           />
         </Col>
       </Row>
+
+      {assignmentSummary ? (
+        <Drawer
+          title="Cost Average Calculator"
+          placement="right"
+          closable={false}
+          onClose={() => {
+            setVisibleCostAvgCalc(false);
+          }}
+          visible={visibleCostAvgCalc}
+          width={500}
+        >
+          <div>Work In Progress...</div>
+          {assignmentSummary ? (
+            <>
+              <Divider />
+              <div>Total Buying Power Used: {assignmentSummary.collateral}</div>
+              <div>Assigned Shares: {assignmentSummary.contracts}</div>
+              <div>Cost Basis: {assignmentSummary.costBasis}</div>
+              <div>
+                Total Premium Collected: {assignmentSummary.totalPremium}
+              </div>
+              <div>
+                Cost Basis w/ Premium:{" "}
+                {assignmentSummary.costBasisWithPremium.toFixed(2)}
+              </div>
+              <Divider />
+              <div>
+                <span>Contracts</span>
+                <InputNumber
+                  min={1}
+                  max={100}
+                  onChange={(value) => {
+                    setCalcContracts(value);
+                  }}
+                />
+              </div>
+              <div>
+                <span>Strike</span>
+                <InputNumber
+                  onChange={(value) => {
+                    setCalcStrike(value);
+                  }}
+                />
+              </div>
+            </>
+          ) : null}
+
+          <div>
+            <Divider />
+            <div>Contracts {calcContracts}</div>
+            <div>Strike {calcStrike}</div>
+            <div>Collateral {calcStrike * calcContracts * 100}</div>
+            <Divider />
+            <div>
+              Total Contracts {calcContracts + assignmentSummary.contracts}
+            </div>
+            <div>
+              Total Collateral{" "}
+              {calcStrike * calcContracts * 100 + assignmentSummary.collateral}
+            </div>
+            <div>
+              Cost Basis{" "}
+              {parseFloat(
+                (calcStrike * calcContracts * 100 +
+                  assignmentSummary.collateral) /
+                  (calcContracts + assignmentSummary.contracts) /
+                  100
+              ).toFixed(2)}
+            </div>
+            <div>
+              Cost Basis w/ Premium{" "}
+              {parseFloat(
+                (calcStrike * calcContracts * 100 +
+                  assignmentSummary.collateral -
+                  assignmentSummary.totalPremium) /
+                  (calcContracts + assignmentSummary.contracts) /
+                  100
+              ).toFixed(2)}
+            </div>
+          </div>
+        </Drawer>
+      ) : null}
     </div>
   );
 }

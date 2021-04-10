@@ -15,6 +15,7 @@ import {
   Statistic,
   Drawer,
   PageHeader,
+  Badge,
 } from "antd";
 import { ArrowUpOutlined, PlusCircleTwoTone } from "@ant-design/icons";
 import moment from "moment";
@@ -32,6 +33,7 @@ function Ledger({ member, token }) {
   const [selectedLedgerId, setSelectedLedgerId] = useState(null);
   const [ledgerData, setLedgerData] = useState([]);
   const [ledgerColumns, setLedgerColumns] = useState([]);
+  const [assignments, setAssignments] = useState({});
   const [analysisData, setAnalysisData] = useState({});
   const [visibleDrawer, setVisibleDrawer] = useState(false);
 
@@ -88,6 +90,47 @@ function Ledger({ member, token }) {
     const optionLedger = rsp.data.data.getOptionLedger;
     if (!optionLedger) {
       return;
+    }
+
+    const assignments = optionLedger
+      .filter((o) => o.status === "ASSIGNED")
+      .sort((a, b) => moment(a.close_date) - moment(b.close_date));
+    const tickerAssignments = {};
+    const ticketAssignmentSummary = [];
+    assignments.forEach((a) => {
+      if (!tickerAssignments[a.ticker]) {
+        tickerAssignments[a.ticker] = assignments.filter(
+          (o) => o.ticker === a.ticker
+        );
+      }
+    });
+
+    for (const ticker in tickerAssignments) {
+      let collateral = 0;
+      let contracts = 0;
+      tickerAssignments[ticker].forEach((option) => {
+        if (option.option_type === "Cash Secured Put") {
+          collateral += parseFloat(
+            option.collateral.replace(/[^0-9\.-]+/g, "")
+          );
+          contracts += option.contracts;
+        } else if (option.option_type === "Covered Call") {
+          collateral -= parseFloat(
+            option.collateral.replace(/[^0-9\.-]+/g, "")
+          );
+          contracts -= option.contracts;
+        }
+      });
+
+      if (contracts) {
+        ticketAssignmentSummary.push({
+          ticker,
+          contracts,
+          collateral,
+          costBasis: collateral / contracts / 100,
+        });
+        setAssignments(ticketAssignmentSummary);
+      }
     }
 
     let key = 0;
@@ -560,6 +603,54 @@ function Ledger({ member, token }) {
           ))}
         </Col>
       </Row>
+
+      {Object.keys(assignments).length ? (
+        <>
+          <Row>
+            <Col span={24}>
+              <Divider orientation="left">Current Assignments</Divider>
+            </Col>
+          </Row>
+          <Row gutter={[16, 16]} justify="center">
+            {assignments.map((ticker, key) => {
+              return (
+                <Col xxl={4} xl={6} lg={10} md={10} sm={22} xs={22}>
+                  <Badge.Ribbon
+                    text={`${ticker.contracts} Contracts`}
+                    key={key}
+                  >
+                    <Card
+                      title={
+                        <Link to={`/ticker/${ticker.ticker}`}>
+                          {ticker.ticker}
+                        </Link>
+                      }
+                    >
+                      <Row style={{ textAlign: "center" }}>
+                        <Col span={12}>
+                          <Statistic
+                            title="Buying Power"
+                            value={ticker.collateral}
+                            prefix="$"
+                          />
+                        </Col>
+                        <Col span={12}>
+                          <Statistic
+                            title="Cost Basis"
+                            value={ticker.costBasis}
+                            precision={2}
+                            prefix="$"
+                          />
+                        </Col>
+                      </Row>
+                    </Card>
+                  </Badge.Ribbon>
+                </Col>
+              );
+            })}
+          </Row>
+        </>
+      ) : null}
 
       <Row>
         <Col span={24}>

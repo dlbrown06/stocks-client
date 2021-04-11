@@ -112,7 +112,7 @@ function Ticker({
       }
     }
     if (contracts) {
-      const totalPremium = optionLedger
+      let totalPremium = optionLedger
         .filter((o) => o.status === "BOUGHT TO CLOSE")
         .map(
           (o) =>
@@ -120,8 +120,10 @@ function Ticker({
               o.debit.replace(/[^0-9\.-]+/g, "")) *
             o.contracts *
             100
-        )
-        .reduce((a, b) => a + b);
+        );
+      totalPremium = totalPremium.length
+        ? totalPremium.reduce((a, b) => a + b)
+        : 0;
 
       setAssignmentSummary({
         totalPremium,

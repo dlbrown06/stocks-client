@@ -20,6 +20,7 @@ import {
 import { CalculatorTwoTone } from "@ant-design/icons";
 import moment from "moment";
 import axios from "axios";
+import Annualized from "../utils/annualized";
 
 import CONSTANTS from "../config/constants";
 const { Option } = Select;
@@ -357,6 +358,74 @@ function Ticker({
                       <Statistic
                         title="Cost Basis w/ Premium"
                         value={assignmentSummary.costBasisWithPremium}
+                        precision={2}
+                        prefix="$"
+                      />
+                    </Col>
+                    <Col md={6} sm={12} xs={12}>
+                      <Statistic
+                        title={`Target CC Premium Exp ${moment()
+                          .endOf("week")
+                          .subtract(1, "d")
+                          .format("MM/DD")}`}
+                        value={Annualized.minimumCoveredCallPremium(
+                          assignmentSummary.costBasis,
+                          moment(),
+                          moment().endOf("week").subtract(1, "d")
+                        )}
+                        precision={2}
+                        prefix="$"
+                      />
+                    </Col>
+                    <Col md={6} sm={12} xs={12}>
+                      <Statistic
+                        title={`Discount Target CC Premium Exp ${moment()
+                          .endOf("week")
+                          .subtract(1, "d")
+                          .format("MM/DD")}`}
+                        value={Annualized.minimumCoveredCallPremium(
+                          assignmentSummary.costBasisWithPremium,
+                          moment(),
+                          moment().endOf("week").subtract(1, "d")
+                        )}
+                        precision={2}
+                        prefix="$"
+                      />
+                    </Col>
+                    <Col md={6} sm={12} xs={12}>
+                      <Statistic
+                        title={`Target CC Premium Exp ${moment()
+                          .endOf("week")
+                          .subtract(1, "d")
+                          .add(1, "weeks")
+                          .format("MM/DD")}`}
+                        value={Annualized.minimumCoveredCallPremium(
+                          assignmentSummary.costBasis,
+                          moment(),
+                          moment()
+                            .endOf("week")
+                            .subtract(1, "d")
+                            .add(1, "weeks")
+                        )}
+                        precision={2}
+                        prefix="$"
+                      />
+                    </Col>
+                    <Col md={6} sm={12} xs={12}>
+                      <Statistic
+                        title={`Discount Target CC Premium Exp ${moment()
+                          .endOf("week")
+                          .subtract(1, "d")
+                          .add(1, "weeks")
+                          .format("MM/DD")}`}
+                        value={Annualized.minimumCoveredCallPremium(
+                          assignmentSummary.costBasisWithPremium,
+                          moment(),
+                          moment()
+                            .endOf("week")
+                            .subtract(1, "d")
+                            .add(1, "weeks")
+                        )}
                         precision={2}
                         prefix="$"
                       />

@@ -4,6 +4,15 @@ import React, { useState } from "react";
 
 const { Text } = Typography;
 
+const layout = {
+  labelCol: { span: 4 },
+  wrapperCol: { span: 20 },
+};
+
+const tailLayout = {
+  wrapperCol: { offset: 4, span: 20 },
+};
+
 export default function FormLogin({ login }) {
   const [formErrors, setFormErrors] = useState([]);
   const [formMessages, setFormMessages] = useState([]);
@@ -23,7 +32,16 @@ export default function FormLogin({ login }) {
   };
 
   return (
-    <Form name="basic" onFinish={onFinish} onFinishFailed={onFinishFailed}>
+    <Form
+      {...layout}
+      name="basic"
+      onFinish={onFinish}
+      onFinishFailed={onFinishFailed}
+      style={{
+        labelCol: { span: 8 },
+        wrapperCol: { span: 16 },
+      }}
+    >
       <Form.Item
         label="Email"
         name="email"
@@ -50,7 +68,7 @@ export default function FormLogin({ login }) {
         <Input.Password />
       </Form.Item>
 
-      <Form.Item>
+      <Form.Item {...tailLayout}>
         <Button type="primary" htmlType="submit" disabled={formMessages.length}>
           {formMessages.length ? (
             <>

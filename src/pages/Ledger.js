@@ -614,7 +614,7 @@ function Ledger({ member, token }) {
           <Row gutter={[16, 16]} justify="center">
             {assignments.map((ticker, key) => {
               return (
-                <Col xxl={4} xl={6} lg={10} md={10} sm={22} xs={22}>
+                <Col xxl={4} xl={6} lg={10} md={10} sm={22} xs={22} key={key}>
                   <Badge.Ribbon
                     text={`${ticker.contracts} Contracts`}
                     key={key}

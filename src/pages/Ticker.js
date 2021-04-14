@@ -1,14 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { useHistory, Link } from "react-router-dom";
+import { useHistory } from "react-router-dom";
 import {
   Form,
-  Input,
-  Button,
   Row,
   Col,
-  DatePicker,
   InputNumber,
-  Select,
   Table,
   Divider,
   Card,
@@ -16,6 +12,7 @@ import {
   Drawer,
   Badge,
   PageHeader,
+  Typography,
 } from "antd";
 import { CalculatorTwoTone } from "@ant-design/icons";
 import moment from "moment";
@@ -23,7 +20,7 @@ import axios from "axios";
 import Annualized from "../utils/annualized";
 
 import CONSTANTS from "../config/constants";
-const { Option } = Select;
+const { Title } = Typography;
 
 function Ticker({
   token,
@@ -33,7 +30,6 @@ function Ticker({
   },
 }) {
   const history = useHistory();
-  const dateFormat = "MM/DD/YYYY";
   document.title = "Wheel Ledger";
 
   const [ledgerData, setLedgerData] = useState([]);
@@ -453,82 +449,144 @@ function Ticker({
 
       {assignmentSummary ? (
         <Drawer
-          title="Cost Average Calculator"
+          title={`${ticker} Cost Average Calculator`}
           placement="right"
           closable={false}
           onClose={() => {
             setVisibleCostAvgCalc(false);
           }}
           visible={visibleCostAvgCalc}
-          width={500}
+          width={350}
         >
-          <div>Work In Progress...</div>
           {assignmentSummary ? (
             <>
-              <Divider />
-              <div>Total Buying Power Used: {assignmentSummary.collateral}</div>
-              <div>Assigned Shares: {assignmentSummary.contracts}</div>
-              <div>Cost Basis: {assignmentSummary.costBasis}</div>
+              <Title level={4}>Current Standing:</Title>
               <div>
-                Total Premium Collected: {assignmentSummary.totalPremium}
+                Total Buying Power Used:{" "}
+                {assignmentSummary.collateral.toLocaleString("en-US", {
+                  style: "currency",
+                  currency: "USD",
+                })}
+              </div>
+              <div>Assigned Shares: {assignmentSummary.contracts}</div>
+              <div>
+                Cost Basis:{" "}
+                {assignmentSummary.costBasis.toLocaleString("en-US", {
+                  style: "currency",
+                  currency: "USD",
+                })}
+              </div>
+              <div>
+                Total Premium Collected:{" "}
+                {assignmentSummary.totalPremium.toLocaleString("en-US", {
+                  style: "currency",
+                  currency: "USD",
+                })}
               </div>
               <div>
                 Cost Basis w/ Premium:{" "}
-                {assignmentSummary.costBasisWithPremium.toFixed(2)}
+                {assignmentSummary.costBasisWithPremium.toLocaleString(
+                  "en-US",
+                  {
+                    style: "currency",
+                    currency: "USD",
+                  }
+                )}
               </div>
               <Divider />
-              <div>
-                <span>Contracts</span>
-                <InputNumber
-                  min={1}
-                  max={100}
-                  onChange={(value) => {
-                    setCalcContracts(value);
-                  }}
-                />
-              </div>
-              <div>
-                <span>Strike</span>
-                <InputNumber
-                  onChange={(value) => {
-                    setCalcStrike(value);
-                  }}
-                />
-              </div>
+              <Form name="basic">
+                <Form.Item
+                  label="Contracts"
+                  name="contracts"
+                  rules={[
+                    {
+                      required: true,
+                      message: "Please input the number of Contracts!",
+                    },
+                  ]}
+                >
+                  <InputNumber
+                    style={{ width: "100%" }}
+                    min={1}
+                    max={100}
+                    onChange={(value) => {
+                      setCalcContracts(value);
+                    }}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  label="Strike"
+                  name="strike"
+                  rules={[
+                    {
+                      required: true,
+                      message: "Please input the Strike Price!",
+                    },
+                  ]}
+                >
+                  <InputNumber
+                    style={{ width: "100%" }}
+                    onChange={(value) => {
+                      setCalcStrike(value);
+                    }}
+                  />
+                </Form.Item>
+              </Form>
             </>
           ) : null}
 
           <div>
             <Divider />
-            <div>Contracts {calcContracts}</div>
-            <div>Strike {calcStrike}</div>
-            <div>Collateral {calcStrike * calcContracts * 100}</div>
-            <Divider />
+            <Title level={4}>New Standing:</Title>
+            <div>
+              Additional Buying Power Requiered:{" "}
+              {(calcContracts * calcStrike * 100).toLocaleString("en-US", {
+                style: "currency",
+                currency: "USD",
+              })}
+            </div>
             <div>
               Total Contracts {calcContracts + assignmentSummary.contracts}
             </div>
             <div>
               Total Collateral{" "}
-              {calcStrike * calcContracts * 100 + assignmentSummary.collateral}
+              {(
+                calcStrike * calcContracts * 100 +
+                assignmentSummary.collateral
+              ).toLocaleString("en-US", {
+                style: "currency",
+                currency: "USD",
+              })}
             </div>
             <div>
               Cost Basis{" "}
-              {parseFloat(
-                (calcStrike * calcContracts * 100 +
-                  assignmentSummary.collateral) /
+              <span style={{ color: "green" }}>
+                {(
+                  (calcStrike * calcContracts * 100 +
+                    assignmentSummary.collateral) /
                   (calcContracts + assignmentSummary.contracts) /
                   100
-              ).toFixed(2)}
+                ).toLocaleString("en-US", {
+                  style: "currency",
+                  currency: "USD",
+                })}
+              </span>
             </div>
             <div>
               Cost Basis w/ Premium{" "}
-              {parseFloat(
-                (calcStrike * calcContracts * 100 +
-                  assignmentSummary.collateral -
-                  assignmentSummary.totalPremium) /
+              <span style={{ color: "green" }}>
+                {(
+                  (calcStrike * calcContracts * 100 +
+                    assignmentSummary.collateral -
+                    assignmentSummary.totalPremium) /
                   (calcContracts + assignmentSummary.contracts) /
                   100
-              ).toFixed(2)}
+                ).toLocaleString("en-US", {
+                  style: "currency",
+                  currency: "USD",
+                })}
+              </span>
             </div>
           </div>
         </Drawer>

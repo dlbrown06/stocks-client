@@ -719,7 +719,7 @@ function Ledger({ member, token }) {
           setVisibleDrawer(false);
         }}
         visible={visibleDrawer}
-        width={500}
+        width={350}
       >
         <Form
           name="basic"

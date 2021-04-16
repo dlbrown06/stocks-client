@@ -53,7 +53,9 @@ export default function App() {
       data: JSON.stringify({
         query: `
             mutation {
-                login(email: "${values.email}", password: "${values.password}") {
+                login(email: "${values.email
+                  .toLowerCase()
+                  .trim()}", password: "${values.password.trim()}") {
                     token
                     member {
                         id

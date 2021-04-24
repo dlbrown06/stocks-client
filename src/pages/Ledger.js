@@ -17,7 +17,11 @@ import {
   PageHeader,
   Badge,
 } from "antd";
-import { ArrowUpOutlined, PlusCircleTwoTone } from "@ant-design/icons";
+import {
+  ArrowUpOutlined,
+  PlusCircleTwoTone,
+  DashboardOutlined,
+} from "@ant-design/icons";
 import moment from "moment";
 import axios from "axios";
 
@@ -160,6 +164,14 @@ function Ledger({ member, token }) {
             .filter((item, i, ar) => ar.indexOf(item) === i)
             .map((v) => ({ text: v, value: v })),
           onFilter: (value, record) => record.status.includes(value),
+          render: (text, record) =>
+            text === "OPEN" ? (
+              <Link to={`/ticker/${record.ticker}/position/${record.id}`}>
+                <DashboardOutlined /> {text}
+              </Link>
+            ) : (
+              text
+            ),
         },
         {
           key: "ticker",
@@ -211,13 +223,13 @@ function Ledger({ member, token }) {
           key: "days_open",
           title: "Days Open",
           dataIndex: "days_open",
-          responsive: ["xl"],
+          // responsive: ["xl"],
         },
         {
           key: "credit",
           title: "Premium",
           dataIndex: "credit",
-          responsive: ["xl"],
+          // responsive: ["xl"],
           render: (text, record) => {
             if (text > record.target_premium) {
               return <span style={{ color: "green" }}>{text}</span>;
@@ -230,7 +242,7 @@ function Ledger({ member, token }) {
           key: "target_premium",
           title: "Target Premium",
           dataIndex: "target_premium",
-          responsive: ["xl"],
+          // responsive: ["xl"],
           render: (text) => <span style={{ color: "grey" }}>{text}</span>,
         },
         {
@@ -243,14 +255,14 @@ function Ledger({ member, token }) {
           key: "buyout_target",
           title: "Target Buy Out",
           dataIndex: "buyout_target",
-          responsive: ["xl"],
+          // responsive: ["xl"],
           render: (text) => <span style={{ color: "grey" }}>{text}</span>,
         },
         {
           key: "collateral",
           title: "Collateral",
           dataIndex: "collateral",
-          responsive: ["xl"],
+          // responsive: ["xl"],
           render: (text, record) => {
             if (record.option_type !== "Covered Call") {
               return text;
@@ -261,7 +273,7 @@ function Ledger({ member, token }) {
           key: "daily_return",
           title: "Daily Return",
           dataIndex: "daily_return",
-          responsive: ["xl"],
+          // responsive: ["xl"],
           sorter: (a, b) =>
             a.daily_return.replace("$", "") - b.daily_return.replace("$", ""),
         },
@@ -269,13 +281,13 @@ function Ledger({ member, token }) {
           key: "net_credit",
           title: "Net",
           dataIndex: "net_credit",
-          responsive: ["xl"],
+          // responsive: ["xl"],
         },
         {
           key: "annualized_return",
           title: "Annualized",
           dataIndex: "annualized_return",
-          responsive: ["xl"],
+          // responsive: ["xl"],
           sorter: (a, b) =>
             a.annualized_return.replace("%", "") -
             b.annualized_return.replace("%", ""),

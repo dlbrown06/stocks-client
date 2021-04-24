@@ -4,7 +4,7 @@ module.exports = {
     // URL: `http://localhost:4000/graphql`, // local development
   },
   TARGETS: {
-    PREMIUM_ANNUALIZED: 60, // targeting 60% annualized gains on each trade
+    PREMIUM_ANNUALIZED: 30, // targeting 30% annualized gains on each trade
     EARLY_CLOSE: 0.75, // cut out early
   },
   OPTION_STATUSES: ["OPEN", "CLOSED", "BOUGHT TO CLOSE", "EXPIRED", "ASSIGNED"],

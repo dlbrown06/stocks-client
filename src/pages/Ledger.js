@@ -37,7 +37,7 @@ function Ledger({ member, token }) {
   const [selectedLedgerId, setSelectedLedgerId] = useState(null);
   const [ledgerData, setLedgerData] = useState([]);
   const [ledgerColumns, setLedgerColumns] = useState([]);
-  const [assignments, setAssignments] = useState({});
+  const [assignments, setAssignments] = useState([]);
   const [analysisData, setAnalysisData] = useState({});
   const [visibleDrawer, setVisibleDrawer] = useState(false);
 
@@ -575,6 +575,25 @@ function Ledger({ member, token }) {
     // console.log(date, dateString);
   };
 
+  const cspCollateral = ledgerData
+    .filter((o) => o.status === "OPEN" && o.option_type === "Cash Secured Put")
+    .map((o) => parseFloat(o.collateral.replace(/[\$\,]/g, "")))
+    .reduce((accum, val) => accum + val, 0);
+  const assignedCollateral = assignments
+    .map((a) => a.collateral)
+    .reduce((accum, val) => accum + val, 0);
+  const totalCollateral = cspCollateral + assignedCollateral;
+  const totalOpenPremium = ledgerData
+    .filter((o) => o.status === "OPEN")
+    .map((o) => o.contracts * o.credit.replace(/\$/g, "") * 100)
+    .reduce((accum, val) => accum + val, 0);
+  const avgAnnualized =
+    ledgerData
+      .filter((o) => o.status === "OPEN")
+      .map((o) => parseFloat(o.annualized_return))
+      .reduce((accum, val) => accum + val, 0) /
+    ledgerData.filter((o) => o.status === "OPEN").length;
+
   return (
     <div>
       <PageHeader
@@ -663,6 +682,49 @@ function Ledger({ member, token }) {
           </Row>
         </>
       ) : null}
+
+      <Row>
+        <Col span={24}>
+          <Divider orientation="left">Open Play Overview</Divider>
+        </Col>
+      </Row>
+      <Row gutter={[16, 16]} justify="center">
+        <Col xxl={4} xl={6} lg={10} md={10} sm={22} xs={22}>
+          <Statistic
+            title="Total Buying Power in Play"
+            value={totalCollateral}
+            prefix="$"
+          />
+        </Col>
+        <Col xxl={4} xl={6} lg={10} md={10} sm={22} xs={22}>
+          <Statistic
+            title="Total Assigned Buying Power"
+            value={assignedCollateral}
+            prefix="$"
+          />
+        </Col>
+        <Col xxl={4} xl={6} lg={10} md={10} sm={22} xs={22}>
+          <Statistic
+            title="Total CSP Buying Power"
+            value={cspCollateral}
+            prefix="$"
+          />
+        </Col>
+        <Col xxl={4} xl={6} lg={10} md={10} sm={22} xs={22}>
+          <Statistic
+            title="Total Unrealized Premium"
+            value={totalOpenPremium}
+            prefix="$"
+          />
+        </Col>
+        <Col xxl={4} xl={6} lg={10} md={10} sm={22} xs={22}>
+          <Statistic
+            title="Average Open Annualized Return"
+            value={avgAnnualized}
+            suffix="%"
+          />
+        </Col>
+      </Row>
 
       <Row>
         <Col span={24}>

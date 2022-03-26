@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { useHistory, Link } from "react-router-dom";
 import {
+  BarChart,
+  Bar,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import {
   Form,
   Input,
   Button,
@@ -44,6 +55,8 @@ function Ledger({ member, token }) {
   const [monthPnL, setMonthPnL] = useState(0);
   const [monthlyPnL, setMonthlyPnL] = useState([]);
   const [monthPnLTickers, setMonthPnLTickers] = useState([]);
+  const [pnlChartData, setPnLChartData] = useState(0);
+  const [tickerChartData, setTickerChartData] = useState([]);
 
   useEffect(() => {
     if (!token) {
@@ -357,6 +370,33 @@ function Ledger({ member, token }) {
       return;
     }
 
+    console.log(pnl, "first");
+    let pnlChartData = [];
+    let tickers = [];
+    for (const i of pnl) {
+      console.log(i);
+      const month = pnlChartData.find((grp) => grp.name === i.month);
+      if (!month) {
+        let newItem = {};
+        newItem.name = i.month;
+        newItem[i.ticker] = parseFloat(i.total.replace(/[\$\,]/g, ""));
+        pnlChartData.push(newItem);
+        tickers.push(i.ticker);
+      } else {
+        if (!month[i.ticker]) {
+          month[i.ticker] = parseFloat(i.total.replace(/[\$\,]/g, ""));
+          tickers.push(i.ticker);
+        }
+      }
+    }
+    console.log(pnlChartData, "pnlChartData");
+    console.log(
+      tickers.filter((item, i, ar) => ar.indexOf(item) === i),
+      "tickers"
+    );
+    setPnLChartData(pnlChartData);
+    setTickerChartData(tickers.filter((item, i, ar) => ar.indexOf(item) === i)); // unqiue tickers
+
     setMonthPnL(
       pnl
         .filter((i) => i.month === moment().format("YYYY-MM"))
@@ -396,17 +436,6 @@ function Ledger({ member, token }) {
     }
 
     setMonthlyPnL(pnl);
-
-    // setMonthyPnL(
-    //   pnl
-    //     .filter((i) => i.month === moment().format("YYYY-MM"))
-    //     .map((i) => i.total.replace(/\$|\,/g, ""))
-    //     .reduce((t, i) => +t + +i, [])
-    // );
-
-    // setMonthPnLTickers(
-    //   pnl.filter((i) => i.month === moment().format("YYYY-MM"))
-    // );
   };
 
   const onFinish = async (values) => {
@@ -613,6 +642,28 @@ function Ledger({ member, token }) {
               value={i.total}
             />
           ))}
+          {/* <ResponsiveContainer width="100%" height="100%"> */}
+          <BarChart
+            width={500}
+            height={300}
+            data={pnlChartData}
+            margin={{
+              top: 20,
+              right: 30,
+              left: 20,
+              bottom: 5,
+            }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            {tickerChartData.map((t) => (
+              <Bar dataKey={t} stackId="a" fill="red" />
+            ))}
+          </BarChart>
+          {/* </ResponsiveContainer> */}
         </Col>
         <Col span={12} style={{ textAlign: "right" }}>
           <Divider orientation="right">Profit this Month by Ticker</Divider>
